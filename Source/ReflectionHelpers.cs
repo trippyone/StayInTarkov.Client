@@ -71,7 +71,7 @@ namespace StayInTarkov
             return dogtagItem;
         }
 
-        public static Item GetDogtagItemView(Inventory __instance)
+        public static Item GetDogtagItemView(EquipmentViewController __instance)
         {
             var equipment = ReflectionHelpers.GetAllPropertiesForObject(__instance).FirstOrDefault(x => x.Name == "Equipment").GetValue(__instance);
             var dogtagSlot = ReflectionHelpers.GetAllMethodsForType(equipment.GetType()).FirstOrDefault(x => x.Name == "GetSlot").Invoke(equipment, new object[] { EquipmentSlot.Dogtag });

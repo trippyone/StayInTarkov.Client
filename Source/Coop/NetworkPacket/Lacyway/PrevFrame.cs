@@ -8,6 +8,8 @@ using UnityEngine;
  * 
  * GClass2179 - List of all Commands to be sent
  * GStruct316 - All network packets for HealthController
+ * method_5 in BotSpawner might be used to add ObservedPlayers to AI Enemy List
+ * 
  * Made by Lacyway for the Stay In Tarkov Project
  * Please give proper credit if you are using this code
  * 
@@ -17,10 +19,9 @@ namespace StayInTarkov.Coop.NetworkPacket.Lacyway
 {
     internal struct PrevFrame
     {
-        private static ManualLogSource Logger;
         public PrevFrame()
         {
-            Logger = BepInEx.Logging.Logger.CreateLogSource("PrevFrame");
+            
         }
 
         public MovementInfoPacket MovementInfoPacket { get; set; }
@@ -98,7 +99,7 @@ namespace StayInTarkov.Coop.NetworkPacket.Lacyway
 
             if (package == null)
             {
-                Logger.LogError("PrevFrame::Deserialize package was null");
+                EFT.UI.ConsoleScreen.LogError("PrevFrame::Deserialize package was null");
                 return default;
             }
 
@@ -162,8 +163,6 @@ namespace StayInTarkov.Coop.NetworkPacket.Lacyway
 
             nextModel.RemoteTime = Time.deltaTime;
             nextModel.IsNeedProcessMovement = true;
-
-            EFT.UI.ConsoleScreen.Log(nextModel.Movement.State.ToString());
 
             var commands = GClass2179.CreateInstance();
             commands.Deserialize(reader);

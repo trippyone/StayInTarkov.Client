@@ -80,7 +80,7 @@ namespace StayInTarkov.Core.Player
             {
                 if (playerView.ProfileId.StartsWith("pmc"))
                 {
-                    if (ReflectionHelpers.GetDogtagItemView(playerView.ObservedPlayerController.InventoryController.Inventory) == null)
+                    if (ReflectionHelpers.GetDogtagItemView(playerView.ObservedPlayerController.EquipmentViewController) == null)
                     {
                         if (!CoopGameComponent.TryGetCoopGameComponent(out CoopGameComponent coopGameComponent))
                             return;

@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -1127,21 +1128,41 @@ namespace StayInTarkov.Coop
 
             OtherPlayers.TryAdd(profile.ProfileId, controller);
 
-            //if (!MatchmakerAcceptPatches.IsClient)
-            //{
-            //    if (otherPlayer.ProfileId.StartsWith("pmc"))
-            //    {
-            //        if (LocalGameInstance != null)
-            //        {
-            //            var botController = (BotsController)ReflectionHelpers.GetFieldFromTypeByFieldType(typeof(BaseLocalGame<GamePlayerOwner>), typeof(BotsController)).GetValue(this.LocalGameInstance);
-            //            if (botController != null)
-            //            {
-            //                Logger.LogDebug("Adding Client Player to Enemy list");
-            //                botController.AddActivePLayer(controller);
-            //            }
-            //        }
-            //    }
-            //}
+            if (!MatchmakerAcceptPatches.IsClient)
+            {
+                if (otherPlayer.ProfileId.StartsWith("pmc"))
+                {
+                    if (LocalGameInstance != null)
+                    {
+                        var botController = (BotsController)ReflectionHelpers.GetFieldFromTypeByFieldType(typeof(BaseLocalGame<GamePlayerOwner>), typeof(BotsController)).GetValue(LocalGameInstance);
+                        if (botController != null)
+                        {
+                            var botSpawner = (BotSpawner)ReflectionHelpers.GetFieldFromTypeByFieldType(typeof(BotsController), typeof(BotSpawner)).GetValue(botController);
+                            if (botSpawner != null)
+                            {
+                                var method_5 = botSpawner.GetType().GetMethod("method_5", BindingFlags.NonPublic | BindingFlags.Instance);
+                                if (method_5 != null)
+                                {
+                                    Logger.LogDebug("Adding Client Player View to Enemy list");
+                                    method_5.Invoke(botSpawner, [controller.PlayerView]);
+                                }
+                                else
+                                {
+                                    Logger.LogError("CreateLocalPlayer: method_5 was null!");
+                                }
+                            }
+                            else
+                            {
+                                Logger.LogError("CreateLocalPlayer: botSpawner was null!");
+                            }
+                        }
+                        else
+                        {
+                            Logger.LogError("CreateLocalPlayer: botController was null!");
+                        }
+                    }
+                }
+            }
 
             return otherPlayer;
         }
