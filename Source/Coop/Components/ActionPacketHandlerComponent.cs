@@ -242,16 +242,15 @@ namespace StayInTarkov.Coop.Components
 
             //foreach (var plyr in profilePlayers)
             {
-                //if (plyr.Value.TryGetComponent<PlayerReplicatedComponent>(out var prc))
-                var prc = plyr.PlayerView.GetComponent<PlayerReplicatedComponent>();
+                if (plyr.PlayerView.TryGetComponent<PlayerReplicatedComponent>(out var prc))
                 {
                     prc.ProcessPacket(packet);
                     processed = true;
                 }
-                //else
-                //{
-                //    Logger.LogError($"Player {profileId} doesn't have a PlayerReplicatedComponent!");
-                //}
+                else
+                {
+                    Logger.LogError($"Player {profileId} doesn't have a PlayerReplicatedComponent!");
+                }
 
                 if (packet.ContainsKey("Extracted"))
                 {
@@ -302,10 +301,11 @@ namespace StayInTarkov.Coop.Components
                 if (Players == null)
                     continue;
 
-                var registeredPlayers = Singleton<GameWorld>.Instance.RegisteredPlayers;
+                //var registeredPlayers = Singleton<GameWorld>.Instance.RegisteredPlayers;
+                var registeredPlayers = Singleton<GameWorld>.Instance.allObservedPlayersByID;
 
                 // If the player now exists, process the packet and end the thread.
-                if (Players.Any(x => x.Key == profileId) || registeredPlayers.Any(x => x.Profile.ProfileId == profileId))
+                if (OtherPlayers.Any(x => x.Key == profileId) || registeredPlayers.Any(x => x.Key == profileId) || Players.Any(x => x.Key == profileId))
                 {
                     // Logger.LogDebug($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss.fff")}: WaitForPlayerAndProcessPacket waited for {(DateTime.Now - startTime).TotalSeconds}s");
                     ProcessPlayerPacket(packet);

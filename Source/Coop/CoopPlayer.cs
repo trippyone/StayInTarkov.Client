@@ -4,13 +4,10 @@ using EFT;
 using EFT.HealthSystem;
 using EFT.Interactive;
 using EFT.InventoryLogic;
-using RootMotion.FinalIK;
-using StayInTarkov.Coop.Matchmaker;
-using StayInTarkov.Coop.Player;
 using StayInTarkov.Coop.Web;
 using StayInTarkov.Core.Player;
+using StayInTarkov.Networking;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -296,7 +293,9 @@ namespace StayInTarkov.Coop
 
         public override Corpse CreateCorpse()
         {
-            float force = EFTHardSettings.Instance.HIT_FORCE *= (0.3f + 0.7f * Mathf.InverseLerp(50f, 20f, LastDamageInfo.PenetrationPower));
+            Logger.LogInfo("CoopPlayer::CreateCorpse on " + ProfileId + " was called.");
+
+            float force = EFTHardSettings.Instance.HIT_FORCE *= 0.3f + 0.7f * Mathf.InverseLerp(50f, 20f, LastDamageInfo.PenetrationPower);
 
             AddCommand(new DeathCommand()
             {

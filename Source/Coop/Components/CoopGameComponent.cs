@@ -4,28 +4,24 @@ using EFT.Interactive;
 using EFT.InventoryLogic;
 using EFT.NextObservedPlayer;
 using EFT.UI;
-using JetBrains.Annotations;
 using StayInTarkov.Configuration;
 using StayInTarkov.Coop.Components;
 using StayInTarkov.Coop.Matchmaker;
 using StayInTarkov.Coop.Player;
 using StayInTarkov.Coop.Web;
 using StayInTarkov.Core.Player;
-using StayInTarkov.EssentialPatches;
 using StayInTarkov.Memory;
 using StayInTarkov.Networking;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-
 using Rect = UnityEngine.Rect;
 
 namespace StayInTarkov.Coop
@@ -156,7 +152,7 @@ namespace StayInTarkov.Coop
 
             LCByterCheck[0] = StayInTarkovHelperConstants
                 .SITTypes
-                .Any(x => x.Name == 
+                .Any(x => x.Name ==
                 Encoding.UTF8.GetString(new byte[] { 0x4c, 0x65, 0x67, 0x61, 0x6c, 0x47, 0x61, 0x6d, 0x65, 0x43, 0x68, 0x65, 0x63, 0x6b }))
                 ? (byte)0x1 : (byte)0x0;
         }
@@ -223,7 +219,7 @@ namespace StayInTarkov.Coop
 
         }
 
-        private long? lastMemory { get;set; }
+        private long? lastMemory { get; set; }
 
         /// <summary>
         /// This clears out the RAM usage very effectively.
@@ -1596,7 +1592,7 @@ namespace StayInTarkov.Coop
                     labelStyle.fontSize = 14;
                     float labelOpacity = 1;
                     float distanceToCenter = Vector3.Distance(screenPos, new Vector3(Screen.width, Screen.height, 0) / 2);
-                    
+
                     if (distanceToCenter < 100)
                     {
                         labelOpacity = distanceToCenter / 100;

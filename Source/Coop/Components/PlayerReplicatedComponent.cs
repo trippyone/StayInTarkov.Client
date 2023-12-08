@@ -194,6 +194,8 @@ namespace StayInTarkov.Core.Player
 
                 //Singleton<GameWorld>.Instance.allObservedPlayersByID.Where(x => x.Key == kvp.ElementAt(0).Key).First().Value.ObservedPlayerController.Apply(kvp.ElementAt(0).Value);
 
+                if (nextMove.CommandsCount > 1)
+                    Logger.LogInfo("Commands are " + nextMove.CommandsCount + " on " + playerView.ProfileId);
                 playerView.ObservedPlayerController.Apply(nextMove);
 
                 //foreach (var player in Singleton<GameWorld>.Instance.allObservedPlayersByID)
