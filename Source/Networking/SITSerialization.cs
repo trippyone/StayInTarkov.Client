@@ -1,7 +1,16 @@
-﻿using EFT;
+﻿using Comfort.Common;
+using ComponentAce.Compression.Libs.zlib;
+using EFT;
+using EFT.InventoryLogic;
 using LiteNetLib.Utils;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Net.Sockets;
+using System.Xml;
 using UnityEngine;
+using UnityEngine.Profiling;
 using static Physical;
 
 // GClass2800
@@ -59,7 +68,6 @@ namespace StayInTarkov.Networking
             public static void SerializeGridItemAddressDescriptor(NetDataWriter writer, GridItemAddressDescriptor gridItemAddressDescriptor)
             {
                 SerializeLocationInGrid(writer, gridItemAddressDescriptor.LocationInGrid);
-
             }
 
             public static GridItemAddressDescriptor DeserializeGridItemAddressDescriptor(NetDataReader reader)
@@ -248,6 +256,73 @@ namespace StayInTarkov.Networking
             }
         }
 
+        // Do not use
+        public class PlayerUtils
+        {
+            public static void SerializeProfile(NetDataWriter writer, Profile profile)
+            {
+                byte[] profileBytes = SimpleZlib.CompressToBytes(profile.ToJson(), 9, null);
+                writer.Put(profileBytes);
+                EFT.UI.ConsoleScreen.Log(profileBytes.Length.ToString());
+                Profile profile2 = SimpleZlib.Decompress(profileBytes, null).ParseJsonTo<Profile>();
+                EFT.UI.ConsoleScreen.Log(profile2.ProfileId);
+            }
+
+            public static Profile DeserializeProfile(byte[] profileBytes)
+            {
+                Profile profile = SimpleZlib.Decompress(profileBytes, null).ParseJsonTo<Profile>();
+                EFT.UI.ConsoleScreen.Log(profile.ToString());
+                return profile;
+            }
+
+            public static void SerializeInventory(NetDataWriter writer, Inventory inventory)
+            {
+                InventoryDescriptor inventoryDescriptor = new InventoryDescriptor()
+                {
+                    Equipment = GClass1463.SerializeItem(inventory.Equipment),
+                    Stash = GClass1463.SerializeItem(inventory.Stash),
+                    QuestRaidItems = GClass1463.SerializeItem(inventory.QuestRaidItems),
+                    QuestStashItems = GClass1463.SerializeItem(inventory.QuestStashItems),
+                    SortingTable = GClass1463.SerializeItem(inventory.SortingTable),
+                    FastAccess = GClass1463.SerializeFastAccess(inventory.FastAccess),
+                    DiscardLimits = GClass1463.SerializeDiscardLimits(inventory.DiscardLimits)
+                };
+                GClass1040 polyWriter = new();
+                polyWriter.WriteEFTInventoryDescriptor(inventoryDescriptor);
+                writer.Put(polyWriter.ToArray());
+            }
+
+            public static Inventory DeserializeInventory(byte[] inventoryBytes)
+            {
+                GClass1035 polyReader = new(inventoryBytes);
+                Inventory inventory = GClass1463.DeserializeInventory(Singleton<ItemFactory>.Instance, polyReader.ReadEFTInventoryDescriptor());
+                return inventory;
+            }   
+        }
+
+        public struct PlayerInfoPacket()
+        {
+            public int ProfileLength { get; set; }
+            public Profile Profile { get; set; }
+
+            public static void Serialize(NetDataWriter writer, PlayerInfoPacket packet)
+            {
+                byte[] profileBytes = SimpleZlib.CompressToBytes(packet.Profile.ToJson(), 9, null);
+                writer.Put(profileBytes.Length);
+                writer.Put(profileBytes);
+            }
+
+            public static PlayerInfoPacket Deserialize(NetDataReader reader)
+            {
+                PlayerInfoPacket packet = new();
+                packet.ProfileLength = reader.GetInt();
+                byte[] profileBytes = new byte[packet.ProfileLength];
+                reader.GetBytes(profileBytes, packet.ProfileLength);
+                packet.Profile = SimpleZlib.Decompress(profileBytes, null).ParseJsonTo<Profile>();
+                return packet;
+            }
+        }
+
         public struct LightStatesPacket
         {
             public int Amount { get; set; }
@@ -284,6 +359,26 @@ namespace StayInTarkov.Networking
                         writer.Put(packet.LightStates[i].LightMode);
                     }
                 }
+            }
+        }
+
+        public struct HeadLightsPacket
+        {
+            public bool TogglesActive { get; set; }
+            public bool ChangesState { get; set; }
+            public static HeadLightsPacket Deserialize(NetDataReader reader)
+            {
+                return new HeadLightsPacket
+                {
+                    TogglesActive = reader.GetBool(),
+                    ChangesState = reader.GetBool()
+                };
+            }
+
+            public static void Serialize(NetDataWriter writer, HeadLightsPacket packet)
+            {
+                writer.Put(packet.TogglesActive);
+                writer.Put(packet.ChangesState);
             }
         }
 
@@ -543,6 +638,31 @@ namespace StayInTarkov.Networking
             }
         }
 
+        public struct GrenadePacket
+        {
+            public GrenadePacketType PacketType { get; set; }
+            public enum GrenadePacketType
+            {
+                ExamineWeapon,
+                HighThrow,
+                LowThrow,
+                PullRingForHighThrow,
+                PullRingForLowThrow
+            }
+
+            public static GrenadePacket Deserialize(NetDataReader reader)
+            {
+                return new GrenadePacket
+                {
+                    PacketType = (GrenadePacketType)reader.GetInt()
+                };
+            }
+            public static void Serialize(NetDataWriter writer, GrenadePacket packet)
+            {
+                writer.Put((int)packet.PacketType);
+            }
+        }
+
         public struct ApplyDamageInfoPacket
         {
             public EDamageType DamageType { get; set; }
@@ -603,6 +723,23 @@ namespace StayInTarkov.Networking
             {
                 writer.Put((int)packet.BodyPartType);
                 writer.Put(packet.Value);
+            }
+        }
+
+        public struct ObservedDeathPacket
+        {
+            public EDamageType DamageType { get; set; }
+
+            public static ObservedDeathPacket Deserialize(NetDataReader reader)
+            {
+                return new ObservedDeathPacket() 
+                {
+                    DamageType = (EDamageType)reader.GetInt()
+                };
+            }
+            public static void Serialize(NetDataWriter writer, ObservedDeathPacket packet)
+            {
+                writer.Put((int)packet.DamageType);
             }
         }
 
@@ -775,6 +912,119 @@ namespace StayInTarkov.Networking
                 writer.Put(packet.OperationBytes);
                 writer.Put(packet.InventoryId);
             }
+        }
+
+        public struct WorldInteractionPacket
+        {
+            public string InteractiveId { get; set; }
+            public EInteractionType InteractionType { get; set; }
+            public bool IsStart { get; set; }
+            public bool HasKey { get; set; }
+            public string KeyItemId { get; set; }
+            public string KeyItemTemplateId { get; set; }
+            public GridItemAddressDescriptor GridItemAddressDescriptor { get; set; }
+            public bool KeySuccess { get; set; }
+
+            public static WorldInteractionPacket Deserialize(NetDataReader reader)
+            {
+                WorldInteractionPacket packet = new();
+                packet.InteractiveId = reader.GetString();
+                packet.InteractionType = (EInteractionType)reader.GetInt();
+                packet.IsStart = reader.GetBool();
+                packet.HasKey = reader.GetBool();
+                if (packet.HasKey)
+                {
+                    packet.KeyItemId = reader.GetString();
+                    packet.KeyItemTemplateId = reader.GetString();
+                    packet.GridItemAddressDescriptor = AddressUtils.DeserializeGridItemAddressDescriptor(reader);
+                    packet.KeySuccess = reader.GetBool();
+                }
+                return packet;
+            }
+
+            public static void Serialize(NetDataWriter writer, WorldInteractionPacket packet)
+            {
+                writer.Put(packet.InteractiveId);
+                writer.Put((int)packet.InteractionType);
+                writer.Put(packet.IsStart);
+                writer.Put(packet.HasKey);
+                if (packet.HasKey)
+                {
+                    writer.Put(packet.KeyItemId);
+                    writer.Put(packet.KeyItemTemplateId);
+                    AddressUtils.SerializeGridItemAddressDescriptor(writer, packet.GridItemAddressDescriptor);
+                    writer.Put(packet.KeySuccess);
+                }
+            }
+        }
+
+        public struct ContainerInteractionPacket
+        {
+            public string InteractiveId { get; set; }
+            public EInteractionType InteractionType { get; set; }
+
+            public static ContainerInteractionPacket Deserialize(NetDataReader reader)
+            {
+                ContainerInteractionPacket packet = new();
+                packet.InteractiveId = reader.GetString();
+                packet.InteractionType = (EInteractionType)reader.GetInt();
+                return packet;
+            }
+            public static void Serialize(NetDataWriter writer, ContainerInteractionPacket packet)
+            {
+                writer.Put(packet.InteractiveId);
+                writer.Put((int)packet.InteractionType);
+            }
+        }
+
+        public struct ProceedPacket()
+        {
+            public EProceedType ProceedType { get; set; }
+            public string ItemId { get; set; } = "";
+            public string ItemTemplateId { get; set; } = "";
+            public float Amount { get; set; } = 0f;
+            public int AnimationVariant { get; set; } = 0;
+            public bool Scheduled { get; set; } = false;
+            public EBodyPart BodyPart { get; set; } = EBodyPart.Common;
+
+            public static ProceedPacket Deserialize(NetDataReader reader)
+            {
+                return new ProceedPacket
+                {
+                    ProceedType = (EProceedType)reader.GetInt(),
+                    ItemId = reader.GetString(),
+                    ItemTemplateId = reader.GetString(),
+                    Amount = reader.GetFloat(),
+                    AnimationVariant = reader.GetInt(),
+                    Scheduled = reader.GetBool(),
+                    BodyPart = (EBodyPart)reader.GetInt()
+                };
+            }
+            public static void Serialize(NetDataWriter writer, ProceedPacket packet)
+            {
+                writer.Put((int)packet.ProceedType);
+                writer.Put(packet.ItemId);
+                writer.Put(packet.ItemTemplateId);
+                writer.Put(packet.Amount);
+                writer.Put(packet.AnimationVariant);
+                writer.Put(packet.Scheduled);
+                writer.Put((int)packet.BodyPart);
+            }
+
+        }
+
+        public enum EProceedType
+        {
+            EmptyHands,
+            FoodDrink,
+            ThrowWeap,
+            Meds,
+            QuickGrenadeThrow,
+            QuickKnifeKick,
+            QuickUse,
+            Weapon,
+            Knife,
+            TryProceed
         }
     }
 }

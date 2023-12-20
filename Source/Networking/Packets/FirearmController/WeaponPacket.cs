@@ -1,5 +1,6 @@
 ﻿using EFT.InventoryLogic;
 using LiteNetLib.Utils;
+using static StayInTarkov.Networking.SITSerialization;
 
 /* 
 * This code has been written by Lacyway (https://github.com/Lacyway) for the SIT Project (https://github.com/stayintarkov/StayInTarkov.Client).
@@ -22,21 +23,29 @@ namespace StayInTarkov.Networking.Packets
         public bool CheckChamber { get; set; }
         public bool CheckFireMode { get; set; }
         public bool ToggleTacticalCombo { get; set; }
-        public SITSerialization.LightStatesPacket LightStatesPacket { get; set; }
+        public LightStatesPacket LightStatesPacket { get; set; }
         public bool ChangeSightMode { get; set; }
-        public SITSerialization.ScopeStatesPacket ScopeStatesPacket { get; set; }
+        public ScopeStatesPacket ScopeStatesPacket { get; set; }
         public bool ToggleLauncher { get; set; }
         public EGesture Gesture { get; set; }
         public bool EnableInventory { get; set; }
         public bool InventoryStatus { get; set; }
         public bool Loot { get; set; }
         public bool Pickup { get; set; }
-        public SITSerialization.ReloadMagPacket ReloadMag { get; set; }
-        public SITSerialization.QuickReloadMagPacket QuickReloadMag { get; set; }
+        public bool HasReloadMagPacket { get; set; }
+        public ReloadMagPacket ReloadMagPacket { get; set; }
+        public bool HasQuickReloadMagPacket { get; set; }
+        public QuickReloadMagPacket QuickReloadMag { get; set; }
+        public bool HasReloadWithAmmoPacket { get; set; }
         public SITSerialization.ReloadWithAmmoPacket ReloadWithAmmo { get; set; }
-        public SITSerialization.CylinderMagPacket CylinderMag { get; set; }
-        public SITSerialization.ReloadLauncherPacket ReloadLauncher { get; set; }
+        public bool HasCylinderMagPacket { get; set; }
+        public CylinderMagPacket CylinderMag { get; set; }
+        public bool HasReloadLauncherPacket { get; set; }
+        public ReloadLauncherPacket ReloadLauncher { get; set; }
+        public bool HasReloadBarrelsPacket { get; set; }
         public SITSerialization.ReloadBarrelsPacket ReloadBarrels { get; set; }
+        public bool HasGrenadePacket { get; set; }
+        public SITSerialization.GrenadePacket GrenadePacket { get; set; }
 
         public WeaponPacket(string profileId)
         {
@@ -56,6 +65,14 @@ namespace StayInTarkov.Networking.Packets
             InventoryStatus = false;
             Loot = false;
             Pickup = false;
+            HasReloadMagPacket = false;            
+            HasQuickReloadMagPacket = false;
+            HasReloadWithAmmoPacket = false;
+            HasCylinderMagPacket = false;
+            HasReloadLauncherPacket = false;
+            HasReloadBarrelsPacket = false;
+            HasGrenadePacket = false;
+
         }
 
         public void Deserialize(NetDataReader reader)
@@ -73,22 +90,37 @@ namespace StayInTarkov.Networking.Packets
             CheckFireMode = reader.GetBool();
             ToggleTacticalCombo = reader.GetBool();
             if (ToggleTacticalCombo)
-                LightStatesPacket = SITSerialization.LightStatesPacket.Deserialize(reader);
+                LightStatesPacket = LightStatesPacket.Deserialize(reader);
             ChangeSightMode = reader.GetBool();
             if (ChangeSightMode)
-                ScopeStatesPacket = SITSerialization.ScopeStatesPacket.Deserialize(reader);
+                ScopeStatesPacket = ScopeStatesPacket.Deserialize(reader);
             ToggleLauncher = reader.GetBool();
             Gesture = (EGesture)reader.GetInt();
             EnableInventory = reader.GetBool();
             InventoryStatus = reader.GetBool();
             Loot = reader.GetBool();
             Pickup = reader.GetBool();
-            ReloadMag = SITSerialization.ReloadMagPacket.Deserialize(reader);
-            QuickReloadMag = SITSerialization.QuickReloadMagPacket.Deserialize(reader);
-            ReloadWithAmmo = SITSerialization.ReloadWithAmmoPacket.Deserialize(reader);
-            CylinderMag = SITSerialization.CylinderMagPacket.Deserialize(reader);
-            ReloadLauncher = SITSerialization.ReloadLauncherPacket.Deserialize(reader);
-            ReloadBarrels = SITSerialization.ReloadBarrelsPacket.Deserialize(reader);
+            HasReloadMagPacket = reader.GetBool();
+            if (HasReloadMagPacket) 
+                ReloadMagPacket = ReloadMagPacket.Deserialize(reader);
+            HasQuickReloadMagPacket = reader.GetBool();
+            if (HasQuickReloadMagPacket) 
+                ReloadMagPacket.Deserialize(reader);
+            HasReloadWithAmmoPacket = reader.GetBool();
+            if (HasReloadWithAmmoPacket)
+                ReloadWithAmmo = SITSerialization.ReloadWithAmmoPacket.Deserialize(reader);
+            HasCylinderMagPacket = reader.GetBool();
+            if (HasCylinderMagPacket)
+                CylinderMag = CylinderMagPacket.Deserialize(reader);
+            HasReloadLauncherPacket = reader.GetBool();
+            if (HasReloadLauncherPacket)
+                ReloadLauncher = ReloadLauncherPacket.Deserialize(reader);
+            HasReloadBarrelsPacket = reader.GetBool();
+            if (HasReloadBarrelsPacket)
+                ReloadBarrels = SITSerialization.ReloadBarrelsPacket.Deserialize(reader);
+            HasGrenadePacket = reader.GetBool();
+            if (HasGrenadePacket)
+                GrenadePacket = SITSerialization.GrenadePacket.Deserialize(reader);
         }
 
         public void Serialize(NetDataWriter writer)
@@ -106,22 +138,37 @@ namespace StayInTarkov.Networking.Packets
             writer.Put(CheckFireMode);
             writer.Put(ToggleTacticalCombo);
             if (ToggleTacticalCombo)
-                SITSerialization.LightStatesPacket.Serialize(writer, LightStatesPacket);
+                LightStatesPacket.Serialize(writer, LightStatesPacket);
             writer.Put(ChangeSightMode);
             if (ChangeSightMode)
-                SITSerialization.ScopeStatesPacket.Serialize(writer, ScopeStatesPacket);
+                ScopeStatesPacket.Serialize(writer, ScopeStatesPacket);
             writer.Put(ToggleLauncher);
             writer.Put((int)Gesture);
             writer.Put(EnableInventory);
             writer.Put(InventoryStatus);
             writer.Put(Loot);
             writer.Put(Pickup);
-            SITSerialization.ReloadMagPacket.Serialize(writer, ReloadMag);
-            SITSerialization.QuickReloadMagPacket.Serialize(writer, QuickReloadMag);
-            SITSerialization.ReloadWithAmmoPacket.Serialize(writer, ReloadWithAmmo);
-            SITSerialization.CylinderMagPacket.Serialize(writer, CylinderMag);
-            SITSerialization.ReloadLauncherPacket.Serialize(writer, ReloadLauncher);
-            SITSerialization.ReloadBarrelsPacket.Serialize(writer, ReloadBarrels);
+            writer.Put(HasReloadMagPacket);
+            if (HasReloadMagPacket)
+                ReloadMagPacket.Serialize(writer, ReloadMagPacket);
+            writer.Put(HasQuickReloadMagPacket); 
+            if (HasQuickReloadMagPacket)
+                QuickReloadMagPacket.Serialize(writer, QuickReloadMag);
+            writer.Put(HasReloadWithAmmoPacket); 
+            if (HasReloadWithAmmoPacket)
+                SITSerialization.ReloadWithAmmoPacket.Serialize(writer, ReloadWithAmmo);
+            writer.Put(HasCylinderMagPacket);
+            if (HasCylinderMagPacket)
+                CylinderMagPacket.Serialize(writer, CylinderMag);
+            writer.Put(HasReloadLauncherPacket);
+            if (HasReloadLauncherPacket)
+                ReloadLauncherPacket.Serialize(writer, ReloadLauncher);
+            writer.Put(HasReloadBarrelsPacket);
+            if (HasReloadBarrelsPacket)
+                SITSerialization.ReloadBarrelsPacket.Serialize(writer, ReloadBarrels);
+            writer.Put(HasGrenadePacket);
+            if (HasGrenadePacket)
+                SITSerialization.GrenadePacket.Serialize(writer, GrenadePacket);
         }
 
         public void ToggleSend()

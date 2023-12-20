@@ -2,6 +2,7 @@
 using EFT;
 using JetBrains.Annotations;
 using StayInTarkov.Coop.Matchmaker;
+using StayInTarkov.Coop.Players;
 using System;
 using System.Collections.Generic;
 using System.IO;

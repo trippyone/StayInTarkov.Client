@@ -1,4 +1,5 @@
 ﻿using StayInTarkov.Coop.Matchmaker;
+using StayInTarkov.Coop.Players;
 using StayInTarkov.Coop.Web;
 using System;
 using System.Collections.Generic;
@@ -14,20 +15,24 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
 
         protected override MethodBase GetTargetMethod() => ReflectionHelpers.GetMethodForType(InstanceType, MethodName);
 
-        public static List<string> CallLocally = new();
-
-        //[PatchPrefix]
-        //public static bool PrePatch(object __instance, LightsStates[] lightsStates, bool force, EFT.Player ____player)
-        //{
-        //    return CallLocally.Contains(____player.ProfileId);
-        //}
-
         [PatchPostfix]
         public static void Postfix(object __instance, LightsStates[] lightsStates, bool force, EFT.Player ____player)
         {
-            var player = ____player as CoopPlayer;
+            var botPlayer = ____player as CoopBot;
+            if (botPlayer != null)
+            {
+                botPlayer.WeaponPacket.ToggleTacticalCombo = true;
+                botPlayer.WeaponPacket.LightStatesPacket = new()
+                {
+                    Amount = lightsStates.Length,
+                    LightStates = lightsStates
+                };
+                botPlayer.WeaponPacket.ToggleSend();
+                return;
+            }
 
-            if (player == null || !player.IsYourPlayer && (!MatchmakerAcceptPatches.IsServer && !player.IsAI))
+            var player = ____player as CoopPlayer;
+            if (player == null || !player.IsYourPlayer)
                 return;
 
             player.WeaponPacket.ToggleTacticalCombo = true;
@@ -37,37 +42,11 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
                 LightStates = lightsStates
             };
             player.WeaponPacket.ToggleSend();
-
-            //if (CallLocally.Contains(____player.ProfileId))
-            //{
-            //    CallLocally.Remove(____player.ProfileId);
-            //    return;
-            //}
-
-            //Dictionary<string, object> dict = new()
-            //{
-            //    { "m", "SetLightsState" },
-            //    { "lightsStates", lightsStates.ToJson() },
-            //    { "force", force.ToString() }
-            //};
-            //AkiBackendCommunicationCoop.PostLocalPlayerData(____player, dict);
         }
 
         public override void Replicated(EFT.Player player, Dictionary<string, object> dict)
         {
-            if (HasProcessed(GetType(), player, dict))
-                return;
 
-            if (player.HandsController is EFT.Player.FirearmController firearmController)
-            {
-                LightsStates[] lightsStates = dict["lightsStates"].ToString().SITParseJson<LightsStates[]>();
-                bool force = bool.Parse(dict["force"].ToString());
-
-                CallLocally.Add(player.ProfileId);
-                firearmController.SetLightsState(lightsStates, force);
-
-                lightsStates = null;
-            }
         }
     }
 }

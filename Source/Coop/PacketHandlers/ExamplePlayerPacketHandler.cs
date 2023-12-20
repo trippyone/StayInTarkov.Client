@@ -1,4 +1,5 @@
 ﻿using StayInTarkov.Coop.Components;
+using StayInTarkov.Coop.Players;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
@@ -11,7 +12,7 @@ namespace StayInTarkov.Coop.PacketHandlers
     internal class ExamplePlayerPacketHandler : IPlayerPacketHandlerComponent
     {
         private CoopGameComponent CoopGameComponent { get { CoopGameComponent.TryGetCoopGameComponent(out var coopGC); return coopGC; } }
-        public ConcurrentDictionary<string, EFT.Player> Players => CoopGameComponent.Players;
+        public ConcurrentDictionary<string, CoopPlayer> Players => CoopGameComponent.Players;
 
         private BepInEx.Logging.ManualLogSource Logger { get; set; }
 

@@ -1,5 +1,6 @@
 ﻿using EFT.HealthSystem;
 using StayInTarkov.Coop.Matchmaker;
+using StayInTarkov.Coop.Players;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -20,8 +21,17 @@ namespace StayInTarkov.Coop.Player.Health
         [PatchPostfix]
         public static void PatchPostfix(ActiveHealthController __instance, float value)
         {
+            var botPlayer = __instance.Player as CoopBot;
+            if (botPlayer != null)
+            {
+                botPlayer.HealthPacket.HasEnergyChange = true;
+                botPlayer.HealthPacket.EnergyChangeValue = value;
+                botPlayer.HealthPacket.ToggleSend();
+                return;
+            }
+
             var player = __instance.Player as CoopPlayer;
-            if (player == null || !player.IsYourPlayer && (!MatchmakerAcceptPatches.IsServer && !player.IsAI))
+            if (player == null || !player.IsYourPlayer)
                 return;
 
             player.HealthPacket.HasEnergyChange = true;

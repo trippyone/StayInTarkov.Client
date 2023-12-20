@@ -1,5 +1,6 @@
 ﻿using StayInTarkov.Coop.Matchmaker;
 using StayInTarkov.Coop.NetworkPacket;
+using StayInTarkov.Coop.Players;
 using StayInTarkov.Networking;
 using System;
 using System.Collections.Generic;
@@ -15,61 +16,31 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
 
         protected override MethodBase GetTargetMethod()
         {
-            var method = ReflectionHelpers.GetMethodForType(InstanceType, MethodName);
-            return method;
+            return ReflectionHelpers.GetMethodForType(InstanceType, MethodName);
         }
-
-        public static List<string> CallLocally = new();
-
-        //[PatchPrefix]
-        //public static bool PrePatch(EFT.Player.FirearmController __instance, EFT.Player ____player)
-        //{
-        //    var player = ____player;
-        //    if (player == null)
-        //        return false;
-
-        //    if (CallLocally.Contains(player.ProfileId))
-        //        return true;
-
-        //    return false;
-        //}
 
         [PatchPostfix]
         public static void PostPatch(EFT.Player.FirearmController __instance, EFT.Player ____player)
         {
+            var botPlayer = ____player as CoopBot;
+            if (botPlayer != null)
+            {
+                botPlayer.WeaponPacket.CheckChamber = true;
+                botPlayer.WeaponPacket.ToggleSend();
+                return;
+            }
+
             var player = ____player as CoopPlayer;
-            if (player == null || !player.IsYourPlayer && (!MatchmakerAcceptPatches.IsServer && !player.IsAI))
+            if (player == null || !player.IsYourPlayer)
                 return;
 
             player.WeaponPacket.CheckChamber = true;
             player.WeaponPacket.ToggleSend();
-
-            //if (CallLocally.Contains(player.ProfileId))
-            //{
-            //    CallLocally.Remove(player.ProfileId);
-            //    return;
-            //}
-
-            //AkiBackendCommunication.Instance.SendDataToPool(new BasePlayerPacket(player.ProfileId, "CheckChamber").Serialize());
         }
 
         public override void Replicated(EFT.Player player, Dictionary<string, object> dict)
         {
-            Logger.LogInfo("FirearmController_CheckChamber_Patch:Replicated");
 
-            BasePlayerPacket checkChamberPacket = new();
-
-            if (dict.ContainsKey("data"))
-                checkChamberPacket = checkChamberPacket.DeserializePacketSIT(dict["data"].ToString());
-
-            if (HasProcessed(GetType(), player, checkChamberPacket))
-                return;
-
-            if (player.HandsController is EFT.Player.FirearmController firearmCont)
-            {
-                CallLocally.Add(player.ProfileId);
-                firearmCont.CheckChamber();
-            }
         }
     }
 }

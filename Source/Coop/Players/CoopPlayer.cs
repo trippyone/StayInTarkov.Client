@@ -5,10 +5,12 @@ using EFT.HealthSystem;
 using EFT.Interactive;
 using EFT.InventoryLogic;
 using LiteNetLib.Utils;
+using Mono.Cecil.Cil;
 using StayInTarkov.Coop.ItemControllerPatches;
 using StayInTarkov.Coop.Matchmaker;
+using StayInTarkov.Coop.NetworkPacket;
 using StayInTarkov.Coop.PacketQueues;
-using StayInTarkov.Coop.Web;
+using StayInTarkov.Coop.Player.Proceed;
 using StayInTarkov.Core.Player;
 using StayInTarkov.Networking;
 using StayInTarkov.Networking.Packets;
@@ -20,7 +22,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace StayInTarkov.Coop
+namespace StayInTarkov.Coop.Players
 {
     public class CoopPlayer : LocalPlayer
     {
@@ -37,6 +39,8 @@ namespace StayInTarkov.Coop
         public HealthPacketQueue HealthPackets { get; set; } = new(100);
         public InventoryPacket InventoryPacket = new("null");
         public InventoryPacketQueue InventoryPackets = new(100);
+        public CommonPlayerPacket CommonPlayerPacket = new("null");
+        public CommonPlayerPacketQueue CommonPlayerPackets { get; set; } = new(100);
 
         public static async Task<LocalPlayer> Create(
             int playerId,
@@ -59,24 +63,38 @@ namespace StayInTarkov.Coop
         {
             CoopPlayer player = null;
 
-            if (isClientDrone)
-            {
-                player = EFT.Player.Create<CoopPlayerClient>(
-                    ResourceBundleConstants.PLAYER_BUNDLE_NAME,
-                    playerId,
-                    position,
-                    updateQueue,
-                    EUpdateMode.Manual,
-                    EUpdateMode.Auto,
-                    characterControllerMode,
-                    getSensitivity,
-                    getAimingSensitivity,
-                    prefix,
-                    aiControl);
-            }
-            else
-            {
-                player = EFT.Player.Create<CoopPlayer>(
+            //if (isClientDrone)
+            //{
+            //    player = EFT.Player.Create<CoopPlayerClient>(
+            //        ResourceBundleConstants.PLAYER_BUNDLE_NAME,
+            //        playerId,
+            //        position,
+            //        updateQueue,
+            //        EUpdateMode.Manual,
+            //        EUpdateMode.Auto,
+            //        characterControllerMode,
+            //        getSensitivity,
+            //        getAimingSensitivity,
+            //        prefix,
+            //        aiControl);
+            //}
+            //else
+            //{
+            //    player = Create<CoopPlayer>(
+            //        ResourceBundleConstants.PLAYER_BUNDLE_NAME,
+            //        playerId,
+            //        position,
+            //        updateQueue,
+            //        armsUpdateMode,
+            //        bodyUpdateMode,
+            //        characterControllerMode,
+            //        getSensitivity,
+            //        getAimingSensitivity,
+            //        prefix,
+            //        aiControl);
+            //}
+
+            player = Create<CoopPlayer>(
                     ResourceBundleConstants.PLAYER_BUNDLE_NAME,
                     playerId,
                     position,
@@ -88,7 +106,7 @@ namespace StayInTarkov.Coop
                     getAimingSensitivity,
                     prefix,
                     aiControl);
-            }
+
             player.IsYourPlayer = isYourPlayer;
 
             InventoryController inventoryController = new PlayerInventoryController(player, profile, true);
@@ -136,14 +154,6 @@ namespace StayInTarkov.Coop
 
         public override void ApplyDamageInfo(DamageInfo damageInfo, EBodyPart bodyPartType, float absorbed, EHeadSegment? headSegment = null)
         {
-            // TODO: Try to run all of this locally so we do not rely on the server / fight lag
-            // TODO: Send information on who shot us to prevent the end screen to be empty / kill feed being wrong
-            // TODO: Do this on ApplyShot instead, and check if instigator is local
-            // Also do check if it's a server and shooter is AI
-
-            if (!MatchmakerAcceptPatches.IsServer)
-                return;
-
             HealthPacket.HasDamageInfo = true;
             HealthPacket.ApplyDamageInfo = new()
             {
@@ -157,6 +167,148 @@ namespace StayInTarkov.Coop
             base.ApplyDamageInfo(damageInfo, bodyPartType, absorbed, headSegment);
         }
 
+        public override void Proceed(bool withNetwork, Callback<IController> callback, bool scheduled = true)
+        {            
+            base.Proceed(withNetwork, callback, scheduled);
+            CommonPlayerPacket.HasProceedPacket = true;
+            CommonPlayerPacket.ProceedPacket = new()
+            {
+                ProceedType = SITSerialization.EProceedType.EmptyHands,
+                Scheduled = scheduled
+            };
+            CommonPlayerPacket.ToggleSend();
+        }
+
+        public override void Proceed(FoodDrink foodDrink, float amount, Callback<IMedsController> callback, int animationVariant, bool scheduled = true)
+        {
+            base.Proceed(foodDrink, amount, callback, animationVariant, scheduled);
+            CommonPlayerPacket.HasProceedPacket = true;
+            CommonPlayerPacket.ProceedPacket = new()
+            {
+                ProceedType = SITSerialization.EProceedType.FoodDrink,
+                ItemId = foodDrink.Id,
+                ItemTemplateId = foodDrink.TemplateId,
+                Amount = amount,
+                AnimationVariant = animationVariant,
+                Scheduled = scheduled
+            };
+            CommonPlayerPacket.ToggleSend();
+        }
+
+        public override void Proceed(Item item, Callback<IQuickUseController> callback, bool scheduled = true)
+        {
+            base.Proceed(item, callback, scheduled);
+            CommonPlayerPacket.HasProceedPacket = true;
+            CommonPlayerPacket.ProceedPacket = new()
+            {
+                ProceedType = SITSerialization.EProceedType.QuickUse,
+                ItemId = item.Id,
+                ItemTemplateId = item.TemplateId,
+                Scheduled = scheduled
+            };
+            CommonPlayerPacket.ToggleSend();
+        }
+
+        public override void Proceed(KnifeComponent knife, Callback<IKnifeController> callback, bool scheduled = true)
+        {
+            base.Proceed(knife, callback, scheduled);
+            CommonPlayerPacket.HasProceedPacket = true;
+            CommonPlayerPacket.ProceedPacket = new()
+            {
+                ProceedType = SITSerialization.EProceedType.Knife,
+                ItemId = knife.Item.Id,
+                ItemTemplateId = knife.Item.TemplateId,
+                Scheduled = scheduled
+            };
+            CommonPlayerPacket.ToggleSend();
+        }
+
+        public override void Proceed(KnifeComponent knife, Callback<IQuickKnifeKickController> callback, bool scheduled = true)
+        {
+            base.Proceed(knife, callback, scheduled);
+            CommonPlayerPacket.HasProceedPacket = true;
+            CommonPlayerPacket.ProceedPacket = new()
+            {
+                ProceedType = SITSerialization.EProceedType.QuickKnifeKick,
+                ItemId = knife.Item.Id,
+                ItemTemplateId = knife.Item.TemplateId,
+                Scheduled = scheduled
+            };
+            CommonPlayerPacket.ToggleSend();
+        }
+
+        public override void Proceed(Meds meds, EBodyPart bodyPart, Callback<IMedsController> callback, int animationVariant, bool scheduled = true)
+        {
+            base.Proceed(meds, bodyPart, callback, animationVariant, scheduled);
+            CommonPlayerPacket.HasProceedPacket = true;
+            CommonPlayerPacket.ProceedPacket = new()
+            {
+                ProceedType = SITSerialization.EProceedType.Meds,
+                ItemId = meds.Id,
+                ItemTemplateId = meds.TemplateId,
+                AnimationVariant = animationVariant,
+                Scheduled = scheduled,
+                BodyPart = bodyPart
+            };
+            CommonPlayerPacket.ToggleSend();
+        }
+
+        public override void Proceed(ThrowWeap throwWeap, Callback<IGrenadeQuickUseController> callback, bool scheduled = true)
+        {
+            base.Proceed(throwWeap, callback, scheduled);
+            CommonPlayerPacket.HasProceedPacket = true;
+            CommonPlayerPacket.ProceedPacket = new()
+            {
+                ProceedType = SITSerialization.EProceedType.QuickGrenadeThrow,
+                ItemId = throwWeap.Id,
+                ItemTemplateId = throwWeap.TemplateId,
+                Scheduled = scheduled,
+            };
+            CommonPlayerPacket.ToggleSend();
+        }
+
+        public override void Proceed(ThrowWeap throwWeap, Callback<IThrowableCallback> callback, bool scheduled = true)
+        {
+            base.Proceed(throwWeap, callback, scheduled);
+            CommonPlayerPacket.HasProceedPacket = true;
+            CommonPlayerPacket.ProceedPacket = new()
+            {
+                ProceedType = SITSerialization.EProceedType.ThrowWeap,
+                ItemId = throwWeap.Id,
+                ItemTemplateId = throwWeap.TemplateId,
+                Scheduled = scheduled,
+            };
+            CommonPlayerPacket.ToggleSend();
+        }
+
+        public override void Proceed(Weapon weapon, Callback<IFirearmHandsController> callback, bool scheduled = true)
+        {
+            base.Proceed(weapon, callback, scheduled);
+            CommonPlayerPacket.HasProceedPacket = true;
+            CommonPlayerPacket.ProceedPacket = new()
+            {
+                ProceedType = SITSerialization.EProceedType.ThrowWeap,
+                ItemId = weapon.Id,
+                ItemTemplateId = weapon.TemplateId,
+                Scheduled = scheduled,
+            };
+            CommonPlayerPacket.ToggleSend();
+        }
+
+        public override void Proceed<T>(Item item, Callback<IController2> callback, bool scheduled = true)
+        {
+            // what is this
+            base.Proceed<T>(item, callback, scheduled);
+        }
+
+        public override void SetInventoryOpened(bool opened)
+        {
+            base.SetInventoryOpened(opened);
+            CommonPlayerPacket.HasInventoryChanged = true;
+            CommonPlayerPacket.SetInventoryOpen = opened;
+            CommonPlayerPacket.ToggleSend();
+        }
+
         public void ClientApplyDamageInfo(DamageInfo damageInfo, EBodyPart bodyPartType, float absorbed, EHeadSegment? headSegment = null)
         {
             base.ApplyDamageInfo(damageInfo, bodyPartType, absorbed, null);
@@ -167,10 +319,17 @@ namespace StayInTarkov.Coop
             return base.ApplyShot(damageInfo, bodyPartType, shotId);
         }
 
-        public override Corpse CreateCorpse()
+        private IEnumerator OnDeath()
         {
+            yield return new WaitForSeconds(1);
             StopCoroutine(SendStatePacket());
-            return base.CreateCorpse();
+            yield break;
+        }
+
+        public override void OnDead(EDamageType damageType)
+        {
+            //StartCoroutine(OnDeath());
+            base.OnDead(damageType);
         }
 
         public override void OnItemAddedOrRemoved(Item item, ItemAddress location, bool added)
@@ -182,31 +341,19 @@ namespace StayInTarkov.Coop
         {
             base.OnPhraseTold(@event, clip, bank, speaker);
 
-            if (IsYourPlayer)
-            {
-                Dictionary<string, object> packet = new()
-                {
-                    { "event", @event.ToString() },
-                    { "index", clip.NetId },
-                    { "m", "Say" }
-                };
-                AkiBackendCommunicationCoop.PostLocalPlayerData(this, packet);
-            }
+            CommonPlayerPacket.Phrase = @event;
+            CommonPlayerPacket.PhraseIndex = clip.NetId;
+            CommonPlayerPacket.ToggleSend();
         }
 
-        public void ReceiveSay(EPhraseTrigger trigger, int index)
+        protected virtual void ReceiveSay(EPhraseTrigger trigger, int index)
         {
             // Look at breathing problem with packets?
-            BepInLogger.LogDebug($"{nameof(ReceiveSay)}({trigger},{index})");
-
-            var prc = GetComponent<PlayerReplicatedComponent>();
-            if (prc == null || !prc.IsClientDrone)
-                return;
 
             Speaker.PlayDirect(trigger, index);
         }
 
-        public void Interpolate()
+        protected virtual void Interpolate()
         {
 
             /* 
@@ -270,7 +417,7 @@ namespace StayInTarkov.Coop
             }
         }
 
-        public IEnumerator SendStatePacket()
+        protected virtual IEnumerator SendStatePacket()
         {
             // TODO: Improve this by not resetting the writer and send many packets instead, rewrite the function in the client/server.
             var waitSeconds = new WaitForSeconds(0.025f);
@@ -311,6 +458,13 @@ namespace StayInTarkov.Coop
                         Client.SendData(Writer, ref InventoryPacket, LiteNetLib.DeliveryMethod.ReliableOrdered);
                         InventoryPacket = new(ProfileId);
                     }
+
+                    if (CommonPlayerPacket.ShouldSend && !string.IsNullOrEmpty(CommonPlayerPacket.ProfileId))
+                    {
+                        Writer.Reset();
+                        Client.SendData(Writer, ref CommonPlayerPacket, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                        CommonPlayerPacket = new(ProfileId);
+                    }
                 }
                 else if (MatchmakerAcceptPatches.IsServer && Server != null)
                 {
@@ -344,40 +498,12 @@ namespace StayInTarkov.Coop
                         Server.SendDataToAll(Writer, ref InventoryPacket, LiteNetLib.DeliveryMethod.ReliableOrdered);
                         InventoryPacket = new(ProfileId);
                     }
-                }
-                else if (MatchmakerAcceptPatches.IsServer)
-                {
-                    PlayerStatePacket playerStatePacket = new(ProfileId, Position, Rotation, HeadRotation,
-                            MovementContext.MovementDirection, CurrentManagedState.Name, MovementContext.Tilt,
-                            MovementContext.Step, CurrentAnimatorStateIndex, MovementContext.CharacterMovementSpeed,
-                            IsInPronePose, PoseLevel, MovementContext.IsSprintEnabled, Physical.SerializationStruct, InputDirection,
-                            MovementContext.BlindFire, MovementContext.ActualLinearSpeed);
 
-                    // TODO: Improve this? Not sure if singleton getter is expensive.
-                    var e = Singleton<GameWorld>.Instance.MainPlayer as CoopPlayer;
-                    Writer.Reset();
-
-                    e.Server.SendDataToAll(Writer, ref playerStatePacket, LiteNetLib.DeliveryMethod.Unreliable);
-
-                    if (WeaponPacket.ShouldSend && !string.IsNullOrEmpty(WeaponPacket.ProfileId))
+                    if (CommonPlayerPacket.ShouldSend && !string.IsNullOrEmpty(CommonPlayerPacket.ProfileId))
                     {
                         Writer.Reset();
-                        e.Server.SendDataToAll(Writer, ref WeaponPacket, LiteNetLib.DeliveryMethod.ReliableOrdered);
-                        WeaponPacket = new(ProfileId);
-                    }
-
-                    if (HealthPacket.ShouldSend && !string.IsNullOrEmpty(HealthPacket.ProfileId))
-                    {
-                        Writer.Reset();
-                        e.Server.SendDataToAll(Writer, ref HealthPacket, LiteNetLib.DeliveryMethod.ReliableOrdered);
-                        HealthPacket = new(ProfileId);
-                    }
-
-                    if (InventoryPacket.ShouldSend && !string.IsNullOrEmpty(InventoryPacket.ProfileId))
-                    {
-                        Writer.Reset();
-                        e.Server.SendDataToAll(Writer, ref InventoryPacket, LiteNetLib.DeliveryMethod.ReliableOrdered);
-                        InventoryPacket = new(ProfileId);
+                        Server.SendDataToAll(Writer, ref CommonPlayerPacket, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                        CommonPlayerPacket = new(ProfileId);
                     }
                 }
             }
@@ -403,36 +529,7 @@ namespace StayInTarkov.Coop
             }
         }
 
-        IEnumerator SpawnPlayer()
-        {
-            // Temp fix to spawn players spawning underground. Still not completely fixed,
-            // might have to run a function every X second to compare Vector3 with current state and if it doesn't match teleport them up.
-            // Don't want to run that every state though as comparing Vector3s is expensive.
-
-            yield return new WaitForSeconds(5);
-
-            var pos1 = new Vector3(NewState.Position.x, NewState.Position.y + 0.75f, NewState.Position.z);
-            Teleport(pos1);
-            CharacterController.Move(pos1, DeltaTime);
-
-            yield return new WaitForSeconds(15);
-
-            if (Vector3.Distance(Position, NewState.Position) > 0.25)
-            {
-                EFT.UI.ConsoleScreen.LogError("SpawnDistance was too far!");
-                var pos2 = new Vector3(NewState.Position.x, NewState.Position.y + 0.75f, NewState.Position.z);
-                Teleport(pos2);
-                CharacterController.Move(pos2, DeltaTime);
-            }
-
-
-            yield return new WaitForSeconds(3);
-
-            ActiveHealthController.SetDamageCoeff(1);
-            yield break;
-        }
-
-        private void Start()
+        protected virtual void Start()
         {
             if (MatchmakerAcceptPatches.IsServer && IsYourPlayer)
             {
@@ -441,7 +538,7 @@ namespace StayInTarkov.Coop
             else if (IsYourPlayer)
             {
                 Client = this.GetOrAddComponent<SITClient>();
-                Client.Player = this;
+                Client.MyPlayer = this;
             }
 
             Writer = new();
@@ -449,6 +546,7 @@ namespace StayInTarkov.Coop
             WeaponPacket = new(ProfileId);
             HealthPacket = new(ProfileId);
             InventoryPacket = new(ProfileId);
+            CommonPlayerPacket = new(ProfileId);
 
             LastState = new(ProfileId, new Vector3(Position.x, Position.y + 0.5f, Position.z), Rotation, HeadRotation,
                 MovementContext.MovementDirection, CurrentManagedState.Name, MovementContext.Tilt,
@@ -466,11 +564,11 @@ namespace StayInTarkov.Coop
             {
                 StartCoroutine(SendStatePacket());
             }
-            else if (MatchmakerAcceptPatches.IsServer) // Only run on AI when we are the server
-            {
-                StartCoroutine(SendStatePacket());
-            }
-            if ((MatchmakerAcceptPatches.IsClient && !IsYourPlayer) || (MatchmakerAcceptPatches.IsServer && !IsAI && !IsYourPlayer)) // Interpolate only if it's other clients
+            //else if (MatchmakerAcceptPatches.IsServer) // Only run on AI when we are the server
+            //{
+            //    StartCoroutine(SendStatePacket());
+            //}
+            if (MatchmakerAcceptPatches.IsClient && !IsYourPlayer || MatchmakerAcceptPatches.IsServer && !IsAI && !IsYourPlayer) // Interpolate only if it's other clients
             {
                 //StartCoroutine(Interpolate());
             }
@@ -479,23 +577,19 @@ namespace StayInTarkov.Coop
                 StartCoroutine(SyncWorld());
             }
 
-            if (!IsYourPlayer && !IsAI)
-            {
-                ActiveHealthController.SetDamageCoeff(0);
-                StartCoroutine(SpawnPlayer());
-            }
+            //if (!IsYourPlayer && !IsAI)
+            //{
+            //    ActiveHealthController.SetDamageCoeff(0);
+            //    StartCoroutine(SpawnPlayer());
+            //}
         }
 
         public override void UpdateTick()
         {
             base.UpdateTick();
-            if ((MatchmakerAcceptPatches.IsClient && !IsYourPlayer) || (MatchmakerAcceptPatches.IsServer && !IsAI && !IsYourPlayer) && HealthController.IsAlive) // Interpolate only if it's other clients and alive
+            if (FirearmPackets.Count > 0)
             {
-                Interpolate();
-                if (FirearmPackets.Count > 0)
-                {
-                    HandleWeaponPacket();
-                }
+                HandleWeaponPacket();
             }
             if (HealthPackets.Count > 0)
             {
@@ -505,15 +599,330 @@ namespace StayInTarkov.Coop
             {
                 HandleInventoryPacket();
             }
+            if (CommonPlayerPackets.Count > 0)
+            {
+                HandleCommonPacket();
+            }
+        }        
+
+        protected virtual void HandleCommonPacket()
+        {
+            var packet = CommonPlayerPackets.Dequeue();
+            EFT.UI.ConsoleScreen.Log("I received a CommonPlayerPacket!");
+
+            if (packet.Phrase != EPhraseTrigger.PhraseNone)
+            {
+                EFT.UI.ConsoleScreen.Log("I received a CommonPlayerPacket Phrase!");
+                ReceiveSay(packet.Phrase, packet.PhraseIndex);
+            }
+
+            if (packet.HasWorldInteractionPacket)
+            {
+                EFT.UI.ConsoleScreen.Log($"I received a CommonPlayerPacket WorldInteractionpacket! InteractiveId: {packet.WorldInteractionPacket.InteractiveId}");
+
+                if (!CoopGameComponent.TryGetCoopGameComponent(out CoopGameComponent coopGameComponent))
+                {
+                    EFT.UI.ConsoleScreen.LogError("HandleCommonPacket::WorldInteractionPacket: CoopGameComponent was null!");
+                    return;
+                }
+
+                if (!ItemFinder.TryFindItemController(packet.ProfileId, out ItemController itemController))
+                {
+                    EFT.UI.ConsoleScreen.LogError("HandleCommonPacket::WorldInteractionPacket: ItemController was null!");
+                    return;
+                }
+
+                WorldInteractiveObject worldInteractiveObject = coopGameComponent.ListOfInteractiveObjects.FirstOrDefault(x => x.Id == packet.WorldInteractionPacket.InteractiveId);
+
+                if (worldInteractiveObject == null)
+                {
+                    EFT.UI.ConsoleScreen.LogError("HandleCommonPacket::WorldInteractionPacket: WorldInteractiveObject was null!");
+                    return;
+                }
+
+                InteractionResult interactionResult = new(packet.WorldInteractionPacket.InteractionType);
+                KeyInteractionResult keyInteractionResult = null;
+
+                if (packet.WorldInteractionPacket.HasKey)
+                {
+                    string itemId = packet.WorldInteractionPacket.KeyItemId;
+                    if (!ItemFinder.TryFindItem(itemId, out Item item))
+                        item = Spawners.ItemFactory.CreateItem(itemId, packet.WorldInteractionPacket.KeyItemTemplateId);
+
+                    if (item != null)
+                    {
+                        if (item.TryGetItemComponent(out KeyComponent keyComponent))
+                        {
+                            DiscardResult discardResult = null;
+
+                            if (packet.WorldInteractionPacket.GridItemAddressDescriptor != null)
+                            {
+                                ItemAddress itemAddress = itemController.ToGridItemAddress(packet.WorldInteractionPacket.GridItemAddressDescriptor);
+                                discardResult = new DiscardResult(new RemoveResult(item, itemAddress, itemController, new ResizeResult(item, itemAddress,
+                                    ItemMovementHandler.ResizeAction.Addition, null, null), null, false), null, null, null);
+                            }
+
+                            keyInteractionResult = new KeyInteractionResult(keyComponent, discardResult, packet.WorldInteractionPacket.KeySuccess);
+                        }
+                        else
+                        {
+                            Logger.LogError($"HandleCommonPacket::WorldInteractionPacket: Packet contain KeyInteractionResult but item {itemId} is not a KeyComponent object.");
+                        }
+                    }
+                    else
+                    {
+                        Logger.LogError($"HandleCommonPacket::WorldInteractionPacket: Packet contain KeyInteractionResult but item {itemId} is not found.");
+                    }
+                }
+                if (packet.WorldInteractionPacket.IsStart)
+                {
+                    CurrentManagedState.StartDoorInteraction(worldInteractiveObject,
+                                keyInteractionResult ?? interactionResult,
+                                keyInteractionResult == null ? null : () => keyInteractionResult.RaiseEvents(itemController, CommandStatus.Failed)); 
+                }
+                else
+                {
+                    CurrentManagedState.ExecuteDoorInteraction(worldInteractiveObject,
+                        keyInteractionResult ?? interactionResult,
+                        keyInteractionResult == null ? null : () => keyInteractionResult.RaiseEvents(itemController, CommandStatus.Failed), this);
+                }
+            }
+
+            if (packet.HasContainerInteractionPacket)
+            {
+                EFT.UI.ConsoleScreen.Log($"I received a CommonPlayerPacket ContainerInteractionPacket! InteractiveId: {packet.ContainerInteractionPacket.InteractiveId}");
+                CoopGameComponent coopGameComponent = CoopGameComponent.GetCoopGameComponent();
+                LootableContainer lootableContainer = coopGameComponent.ListOfInteractiveObjects.FirstOrDefault(x => x.Id == packet.ContainerInteractionPacket.InteractiveId) as LootableContainer;
+
+                if (lootableContainer != null)
+                {
+                    string methodName = string.Empty;
+                    switch (packet.ContainerInteractionPacket.InteractionType)
+                    {
+                        case EInteractionType.Open:
+                            methodName = "Open";
+                            break;
+                        case EInteractionType.Close:
+                            methodName = "Close";
+                            break;
+                        case EInteractionType.Unlock:
+                            methodName = "Unlock";
+                            break;
+                        case EInteractionType.Breach:
+                            break;
+                        case EInteractionType.Lock:
+                            methodName = "Lock";
+                            break;
+                    }
+
+                    void Interact() => ReflectionHelpers.InvokeMethodForObject(lootableContainer, methodName);
+
+                    if (packet.ContainerInteractionPacket.InteractionType == EInteractionType.Unlock)
+                        Interact();
+                    else
+                        lootableContainer.StartBehaviourTimer(EFTHardSettings.Instance.DelayToOpenContainer, Interact);
+                }
+                else
+                {
+                    EFT.UI.ConsoleScreen.LogError("CommonPlayerPacket::ContainerInteractionPacket: LootableContainer was null!");
+                }
+            }
+
+            if (packet.HasProceedPacket)
+            {
+                EFT.UI.ConsoleScreen.Log("I received a ProceedPacket");
+                switch (packet.ProceedPacket.ProceedType)
+                {
+                    case SITSerialization.EProceedType.EmptyHands:
+                    {
+                            EFT.UI.ConsoleScreen.Log("ProceedPacket was: EmptyHands");
+                            base.Proceed(false, null, packet.ProceedPacket.Scheduled);
+                        break;
+                    }
+                    case SITSerialization.EProceedType.FoodDrink:
+                    {
+                            EFT.UI.ConsoleScreen.Log("ProceedPacket was: FoodDrink");
+                            if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
+                        {
+                            if (item is FoodDrink foodDrink)
+                            {
+                                base.Proceed(foodDrink, packet.ProceedPacket.Amount, null, packet.ProceedPacket.AnimationVariant, packet.ProceedPacket.Scheduled);
+                            }
+                            else
+                            {
+                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type FoodDrink!");
+                            }
+                        }
+                        else
+                        {
+                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
+                        }
+                        break;
+                    }
+                    case SITSerialization.EProceedType.ThrowWeap:
+                    {
+                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: ThrowWeap");
+                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
+                        {
+                            if (item is ThrowWeap throwWeap)
+                            {
+                                base.Proceed(throwWeap, (Callback<IThrowableCallback>)null, packet.ProceedPacket.Scheduled);
+                            }
+                            else
+                            {
+                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type ThrowWeap!");
+                            }
+                        }
+                        else
+                        {
+                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
+                        }
+                        break;
+                    }
+                    case SITSerialization.EProceedType.Meds:
+                    {
+                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: Meds");
+                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
+                        {
+                            if (item is Meds meds)
+                            {
+                                base.Proceed(meds, packet.ProceedPacket.BodyPart, null, packet.ProceedPacket.AnimationVariant, packet.ProceedPacket.Scheduled);
+                            }
+                            else
+                            {
+                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type FoodDrink!");
+                            }
+                        }
+                        else
+                        {
+                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
+                        }
+                        break;
+                    }
+                    case SITSerialization.EProceedType.QuickGrenadeThrow:
+                    {
+                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: QuickGrenadeThrow");
+                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
+                        {
+                            if (item is ThrowWeap throwWeap)
+                            {
+                                Proceed(throwWeap, (Callback<IGrenadeQuickUseController>)null, packet.ProceedPacket.Scheduled);
+                            }
+                            else
+                            {
+                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type ThrowWeap!");
+                            }
+                        }
+                        else
+                        {
+                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
+                        }
+                        break;
+                    }
+                    case SITSerialization.EProceedType.QuickKnifeKick:
+                    {
+                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: QuickKnifeKick");
+                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
+                        {
+                            if (item.TryGetItemComponent(out KnifeComponent knifeComponent))
+                            {
+                                Proceed(knifeComponent, (Callback<IQuickKnifeKickController>)null, packet.ProceedPacket.Scheduled);
+                            }
+                            else
+                            {
+                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type KnifeComponent!");
+                            }
+                        }
+                        else
+                        {
+                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
+                        }
+                        break;
+                    }
+                    case SITSerialization.EProceedType.QuickUse:
+                    {
+                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: QuickUse");
+                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
+                        {
+                            base.Proceed(item, null, packet.ProceedPacket.Scheduled);
+                        }
+                        else
+                        {
+                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
+                        }
+                        break;
+                    }
+                    case SITSerialization.EProceedType.Weapon:
+                    {
+                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: Weapon");
+                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
+                        {
+                            if (item is Weapon weapon)
+                            {
+                                base.Proceed(weapon, null, packet.ProceedPacket.Scheduled);
+                            }
+                            else
+                            {
+                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type Weapon!");
+                            }
+                        }
+                        else
+                        {
+                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
+                        }
+                        break;
+                    }
+                    case SITSerialization.EProceedType.Knife:
+                    {
+                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: Knife");
+                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
+                        {
+                            if (item.TryGetItemComponent(out KnifeComponent knifeComponent))
+                            {
+                                base.Proceed(knifeComponent, (Callback<IKnifeController>)null, packet.ProceedPacket.Scheduled);
+                            }
+                            else
+                            {
+                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type KnifeComponent!");
+                            }
+                        }
+                        else
+                        {
+                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
+                        }
+                        break;
+                    }
+                    case SITSerialization.EProceedType.TryProceed:
+                    {
+                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: TryProceed");
+                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
+                        {
+                            TryProceed(item, null, packet.ProceedPacket.Scheduled);
+                        }
+                        else
+                        {
+                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if (packet.HasHeadLightsPackage)
+                SwitchHeadLights(packet.HeadLightsPacket.TogglesActive, packet.HeadLightsPacket.ChangesState);
+
+            if (packet.HasInventoryChanged)
+                base.SetInventoryOpened(packet.SetInventoryOpen);
         }
 
-        private void HandleInventoryPacket()
+        protected virtual void HandleInventoryPacket()
         {
             EFT.UI.ConsoleScreen.Log("I received a InventoryPacket");
             var packet = InventoryPackets.Dequeue();
 
             // TODO: Sometimes host drops items that AI dropped?
             // Seems like we can loot other players now without problems, maybe it was a problem when testing locally.
+            // BUG: Looting a weapon puts it in another players inventory
 
             if (packet.HasItemControllerExecutePacket)
             {
@@ -576,7 +985,7 @@ namespace StayInTarkov.Coop
             //}
         }
 
-        private void HandleWeaponPacket()
+        protected virtual void HandleWeaponPacket()
         {
 
             /* 
@@ -626,32 +1035,32 @@ namespace StayInTarkov.Coop
                 if (packet.EnableInventory)
                     firearmController.SetInventoryOpened(packet.InventoryStatus);
 
-                if (packet.ReloadMag.Reload)
+                if (packet.ReloadMagPacket.Reload)
                 {
                     MagazineClass magazine;
                     try
                     {
-                        Item item = _inventoryController.FindItem(itemId: packet.ReloadMag.MagId);
+                        Item item = _inventoryController.FindItem(itemId: packet.ReloadMagPacket.MagId);
                         magazine = item as MagazineClass;
                         if (magazine == null)
                         {
-                            EFT.UI.ConsoleScreen.LogError($"HandleFirearmPacket::ReloadMag could not cast {packet.ReloadMag.MagId} as a magazine, got {item.ShortName}");
+                            EFT.UI.ConsoleScreen.LogError($"HandleFirearmPacket::ReloadMag could not cast {packet.ReloadMagPacket.MagId} as a magazine, got {item.ShortName}");
                         }
                     }
                     catch (Exception ex)
                     {
                         EFT.UI.ConsoleScreen.LogException(ex);
-                        EFT.UI.ConsoleScreen.LogError($"There is no item {packet.ReloadMag.MagId} in profile {ProfileId}");
+                        EFT.UI.ConsoleScreen.LogError($"There is no item {packet.ReloadMagPacket.MagId} in profile {ProfileId}");
                         throw;
                     }
                     GridItemAddress gridItemAddress = null;
-                    if (packet.ReloadMag.LocationDescription != null && packet.ReloadMag.LocationDescription.Length != 0)
+                    if (packet.ReloadMagPacket.LocationDescription != null)
                     {
-                        using MemoryStream memoryStream = new(packet.ReloadMag.LocationDescription);
+                        using MemoryStream memoryStream = new(packet.ReloadMagPacket.LocationDescription);
                         using BinaryReader binaryReader = new(memoryStream);
                         try
                         {
-                            if (packet.ReloadMag.LocationDescription.Length != 0)
+                            if (packet.ReloadMagPacket.LocationDescription.Length != 0)
                             {
                                 GridItemAddressDescriptor descriptor = binaryReader.ReadEFTGridItemAddressDescriptor();
                                 gridItemAddress = _inventoryController.ToGridItemAddress(descriptor);
@@ -679,13 +1088,13 @@ namespace StayInTarkov.Coop
                         magazine = item as MagazineClass;
                         if (magazine == null)
                         {
-                            EFT.UI.ConsoleScreen.LogError($"HandleFirearmPacket::QuickReloadMag could not cast {packet.ReloadMag.MagId} as a magazine, got {item.ShortName}");
+                            EFT.UI.ConsoleScreen.LogError($"HandleFirearmPacket::QuickReloadMag could not cast {packet.ReloadMagPacket.MagId} as a magazine, got {item.ShortName}");
                         }
                     }
                     catch (Exception ex)
                     {
                         EFT.UI.ConsoleScreen.LogException(ex);
-                        EFT.UI.ConsoleScreen.LogError($"There is no item {packet.ReloadMag.MagId} in profile {ProfileId}");
+                        EFT.UI.ConsoleScreen.LogError($"There is no item {packet.ReloadMagPacket.MagId} in profile {ProfileId}");
                         throw;
                     }
                     firearmController.QuickReloadMag(magazine, null);
@@ -764,9 +1173,48 @@ namespace StayInTarkov.Coop
 
             if (packet.Pickup)
                 HandsController.Pickup(packet.Pickup);
+
+            if (packet.HasGrenadePacket)
+            {
+                if (HandsController is GrenadeController controller)
+                {
+                    switch (packet.GrenadePacket.PacketType)
+                    {
+                        case SITSerialization.GrenadePacket.GrenadePacketType.ExamineWeapon:
+                        {
+                            controller.ExamineWeapon(); 
+                            break;
+                        }
+                        case SITSerialization.GrenadePacket.GrenadePacketType.HighThrow:
+                        {
+                            controller.HighThrow();
+                            break;
+                        }
+                        case SITSerialization.GrenadePacket.GrenadePacketType.LowThrow:
+                        {
+                            controller.LowThrow();
+                            break;
+                        }
+                        case SITSerialization.GrenadePacket.GrenadePacketType.PullRingForHighThrow:
+                        {
+                            controller.PullRingForHighThrow();
+                            break;
+                        }
+                        case SITSerialization.GrenadePacket.GrenadePacketType.PullRingForLowThrow:
+                        {
+                            controller.PullRingForLowThrow();
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    EFT.UI.ConsoleScreen.LogError($"HandleFirearmPacket::GrenadePacket: HandsController was not of type GrenadeController! Was {HandsController.GetType().Name}");
+                }
+            }
         }
 
-        private void HandleHealthPacket()
+        protected virtual void HandleHealthPacket()
         {
             EFT.UI.ConsoleScreen.Log("I received a HealthPacket");
             var packet = HealthPackets.Dequeue();
@@ -782,13 +1230,13 @@ namespace StayInTarkov.Coop
                 ClientApplyDamageInfo(damageInfo, packet.ApplyDamageInfo.BodyPartType, packet.ApplyDamageInfo.Absorbed);
             }
 
-            if (packet.HasBodyPartRestoreInfo && !IsYourPlayer)
+            if (packet.HasBodyPartRestoreInfo)
             {
                 EFT.UI.ConsoleScreen.Log("I received a RestoreBodyPartPacket");
                 ActiveHealthController.RestoreBodyPart(packet.RestoreBodyPartPacket.BodyPartType, packet.RestoreBodyPartPacket.HealthPenalty);
             }
 
-            if (packet.HasChangeHealthPacket && !IsYourPlayer)
+            if (packet.HasChangeHealthPacket)
             {
                 EFT.UI.ConsoleScreen.Log("I received a ChangeHealthPacket");
                 DamageInfo dInfo = new()
@@ -798,19 +1246,19 @@ namespace StayInTarkov.Coop
                 ActiveHealthController.ChangeHealth(packet.ChangeHealthPacket.BodyPartType, packet.ChangeHealthPacket.Value, dInfo);
             }
 
-            if (packet.HasEnergyChange && !IsYourPlayer)
+            if (packet.HasEnergyChange)
             {
                 EFT.UI.ConsoleScreen.Log("I received a EnergyChangePacket");
                 ActiveHealthController.ChangeEnergy(packet.EnergyChangeValue);
             }
 
-            if (packet.HasHydrationChange && !IsYourPlayer)
+            if (packet.HasHydrationChange)
             {
                 EFT.UI.ConsoleScreen.Log("I received a HydrationChangePacket");
                 ActiveHealthController.ChangeHydration(packet.HydrationChangeValue);
             }
 
-            if (packet.HasAddEffect && !IsYourPlayer)
+            if (packet.HasAddEffect)
             {
                 EFT.UI.ConsoleScreen.Log("I received an AddEffectPacket");
                 var coopHealthController = ActiveHealthController as CoopHealthController;
@@ -818,7 +1266,7 @@ namespace StayInTarkov.Coop
                     packet.AddEffectPacket.WorkTime, packet.AddEffectPacket.ResidueTime, packet.AddEffectPacket.Strength);
             }
 
-            if (packet.HasRemoveEffect && !IsYourPlayer)
+            if (packet.HasRemoveEffect)
             {
                 // TODO: Fix sprint bug where sometimes the effects don't sync so clients still think the other player can't sprint
 
@@ -847,11 +1295,20 @@ namespace StayInTarkov.Coop
                     EFT.UI.ConsoleScreen.Log("RemoveEffectPacket: toRemove was null!");
                 }
             }
+
+            if (packet.HasObservedDeathPacket)
+            {
+                EFT.UI.ConsoleScreen.Log("I received a ObservedDeathPacket");
+                ActiveHealthController.Kill(packet.ObservedDeathPacket.DamageType);
+                if (HandsController is FirearmController firearmCont)
+                {
+                    firearmCont.SetTriggerPressed(false);
+                }
+            }
         }
 
         public override void OnDestroy()
         {
-            BepInLogger.LogDebug("OnDestroy()");
             base.OnDestroy();
         }
 

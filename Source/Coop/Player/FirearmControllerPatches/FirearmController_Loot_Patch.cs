@@ -1,4 +1,5 @@
 ﻿using StayInTarkov.Coop.Matchmaker;
+using StayInTarkov.Coop.Players;
 using StayInTarkov.Coop.Web;
 using System;
 using System.Collections.Generic;
@@ -17,64 +18,28 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
             return ReflectionHelpers.GetMethodForType(InstanceType, MethodName, findFirst: true);
         }
 
-        public static List<string> CallLocally = new();
-
-
-        //[PatchPrefix]
-        //public static bool PrePatch(
-        //    EFT.Player.FirearmController __instance
-        //    , EFT.Player ____player)
-        //{
-        //    var player = ____player;
-        //    if (player == null)
-        //        return false;
-
-        //    var result = false;
-        //    if (CallLocally.Contains(player.ProfileId))
-        //        result = true;
-
-        //    return result;
-        //}
-
         [PatchPostfix]
         public static void PostPatch(EFT.Player.FirearmController __instance, ref bool p, EFT.Player ____player)
         {
+            var botPlayer = ____player as CoopBot;
+            if (botPlayer != null)
+            {
+                botPlayer.WeaponPacket.Loot = p;
+                botPlayer.WeaponPacket.ToggleSend();
+                return;
+            }
+
             var player = ____player as CoopPlayer;
-            if (player == null || !player.IsYourPlayer && (!MatchmakerAcceptPatches.IsServer && !player.IsAI))
+            if (player == null || !player.IsYourPlayer)
                 return;
 
             player.WeaponPacket.Loot = p;
             player.WeaponPacket.ToggleSend();
-
-            //GetLogger(typeof(FirearmController_Loot_Patch)).LogInfo("Loot");
-
-            //var player = ReflectionHelpers.GetAllFieldsForObject(__instance).First(x => x.Name == "_player").GetValue(__instance) as EFT.Player;
-            //if (player == null)
-            //    return;
-
-            //if (CallLocally.Contains(player.ProfileId))
-            //{
-            //    CallLocally.Remove(player.ProfileId);
-            //    return;
-            //}
-
-            //Dictionary<string, object> dictionary = new();
-            //dictionary.Add("p", p);
-            //dictionary.Add("m", "Loot");
-            //AkiBackendCommunicationCoop.PostLocalPlayerData(player, dictionary);
         }
 
         public override void Replicated(EFT.Player player, Dictionary<string, object> dict)
         {
-            if (HasProcessed(GetType(), player, dict))
-                return;
 
-            if (player.HandsController is EFT.Player.FirearmController firearmCont)
-            {
-                CallLocally.Add(player.ProfileId);
-                var p = bool.Parse(dict["p"].ToString());
-                firearmCont.Loot(p);
-            }
         }
     }
 }

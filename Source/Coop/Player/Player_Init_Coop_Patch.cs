@@ -3,6 +3,7 @@ using Comfort.Common;
 using EFT;
 using StayInTarkov.Configuration;
 using StayInTarkov.Coop.Matchmaker;
+using StayInTarkov.Coop.Players;
 using StayInTarkov.Coop.Web;
 using StayInTarkov.Core.Player;
 using StayInTarkov.UI;
@@ -50,7 +51,7 @@ namespace StayInTarkov.Coop.Player
             if (Singleton<GameWorld>.Instance != null)
             {
                 if (!coopGC.Players.ContainsKey(profileId))
-                    coopGC.Players.TryAdd(profileId, player);
+                    coopGC.Players.TryAdd(profileId, player as CoopPlayer);
 
                 if (!Singleton<GameWorld>.Instance.RegisteredPlayers.Any(x => x.ProfileId == profileId))
                     Singleton<GameWorld>.Instance.RegisterPlayer(player);

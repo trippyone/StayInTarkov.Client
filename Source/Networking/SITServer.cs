@@ -5,9 +5,11 @@ using LiteNetLib;
 using LiteNetLib.Utils;
 using StayInTarkov.Configuration;
 using StayInTarkov.Coop;
+using StayInTarkov.Coop.Players;
 using StayInTarkov.Networking.Packets;
-using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using UnityEngine;
@@ -25,8 +27,9 @@ namespace StayInTarkov.Networking
         private LiteNetLib.NetManager _netServer;
         public NetPacketProcessor _packetProcessor = new();
         private NetDataWriter _dataWriter = new();
-
-        public ConcurrentDictionary<string, EFT.Player> Players => CoopGameComponent.Players;
+        public CoopPlayer MyPlayer => Singleton<GameWorld>.Instance.MainPlayer as CoopPlayer;
+        public ConcurrentDictionary<string, CoopPlayer> Players => CoopGameComponent.Players;
+        public List<string> PlayersMissing = new();
         private CoopGameComponent CoopGameComponent { get; set; }
 
         public void Start()
@@ -43,6 +46,8 @@ namespace StayInTarkov.Networking
             _packetProcessor.SubscribeNetSerializable<WeaponPacket, NetPeer>(OnWeaponPacketReceived);
             _packetProcessor.SubscribeNetSerializable<HealthPacket, NetPeer>(OnHealthPacketReceived);
             _packetProcessor.SubscribeNetSerializable<InventoryPacket, NetPeer>(OnInventoryPacketReceived);
+            _packetProcessor.SubscribeNetSerializable<CommonPlayerPacket, NetPeer>(OnCommonPlayerPacketReceived);
+            _packetProcessor.SubscribeNetSerializable<AllCharacterRequestPacket, NetPeer>(OnAllCharacterRequestPacketReceived);
 
             _netServer = new LiteNetLib.NetManager(this)
             {
@@ -59,12 +64,80 @@ namespace StayInTarkov.Networking
                 EFT.Communications.ENotificationDurationType.Default, EFT.Communications.ENotificationIconType.EntryPoint);
         }
 
+        private void OnAllCharacterRequestPacketReceived(AllCharacterRequestPacket packet, NetPeer peer)
+        {
+            // This method needs to be refined. For some reason the ping-pong has to be run twice for it to work on the host?
+            EFT.UI.ConsoleScreen.Log("Received CharacterRequest");
+            if (packet.IsRequest)
+            {
+                foreach (var player in CoopGameComponent.Players.Values)
+                {
+                    if (player.ProfileId == packet.ProfileId)
+                        continue;
+
+                    if (packet.Characters.Contains(player.ProfileId))
+                        continue;
+
+                    AllCharacterRequestPacket requestPacket = new(player.ProfileId)
+                    {
+                        IsRequest = false,
+                        PlayerInfo = new()
+                        {
+                            Profile = player.Profile
+                        },
+                        IsAlive = player.ActiveHealthController.IsAlive
+                    };
+                    _dataWriter.Reset();
+                    SendDataToPeer(peer, _dataWriter, ref requestPacket, DeliveryMethod.ReliableOrdered);
+                }
+            }
+            if (!Players.ContainsKey(packet.ProfileId) && !PlayersMissing.Contains(packet.ProfileId))
+            {
+                PlayersMissing.Add(packet.ProfileId);
+                EFT.UI.ConsoleScreen.Log($"Requesting missing player from server.");
+                AllCharacterRequestPacket requestPacket = new(MyPlayer.ProfileId);
+                _dataWriter.Reset();
+                SendDataToPeer(peer, _dataWriter, ref requestPacket, DeliveryMethod.ReliableOrdered);                
+            }
+            else if (!packet.IsRequest && PlayersMissing.Contains(packet.ProfileId))
+            {
+                EFT.UI.ConsoleScreen.Log($"Received CharacterRequest from client: ProfileID: {packet.PlayerInfo.Profile.ProfileId}, Nickname: {packet.PlayerInfo.Profile.Nickname}");
+                if (packet.ProfileId != MyPlayer.ProfileId)
+                {
+                    if (!CoopGameComponent.PlayersToSpawn.ContainsKey(packet.PlayerInfo.Profile.ProfileId))
+                        CoopGameComponent.PlayersToSpawn.TryAdd(packet.PlayerInfo.Profile.ProfileId, ESpawnState.None);
+                    if (!CoopGameComponent.PlayersToSpawnProfiles.ContainsKey(packet.PlayerInfo.Profile.ProfileId))
+                        CoopGameComponent.PlayersToSpawnProfiles.Add(packet.PlayerInfo.Profile.ProfileId, packet.PlayerInfo.Profile);
+
+                    CoopGameComponent.TestCreateObserved(packet.PlayerInfo.Profile, new Vector3(0, 100, 0), packet.IsAlive);
+                    PlayersMissing.Remove(packet.ProfileId);
+                }
+            }
+        }
+
+        private void OnCommonPlayerPacketReceived(CommonPlayerPacket packet, NetPeer peer)
+        {
+            if (!Players.ContainsKey(packet.ProfileId))
+                return;
+
+            _dataWriter.Reset();
+            SendDataToAll(_dataWriter, ref packet, DeliveryMethod.ReliableOrdered, peer);
+
+            var playerToApply = Players[packet.ProfileId];
+            if (playerToApply != default && playerToApply != null)
+            {
+                playerToApply.CommonPlayerPackets.Enqueue(packet);
+            }
+        }
         private void OnInventoryPacketReceived(InventoryPacket packet, NetPeer peer)
         {
             if (!Players.ContainsKey(packet.ProfileId))
                 return;
 
-            var playerToApply = Players[packet.ProfileId] as CoopPlayer;
+            _dataWriter.Reset();
+            SendDataToAll(_dataWriter, ref packet, DeliveryMethod.ReliableOrdered, peer);
+
+            var playerToApply = Players[packet.ProfileId];
             if (playerToApply != default && playerToApply != null)
             {
                 playerToApply.InventoryPackets.Enqueue(packet);
@@ -76,7 +149,10 @@ namespace StayInTarkov.Networking
             if (!Players.ContainsKey(packet.ProfileId))
                 return;
 
-            var playerToApply = Players[packet.ProfileId] as CoopPlayer;
+            _dataWriter.Reset();
+            SendDataToAll(_dataWriter, ref packet, DeliveryMethod.ReliableOrdered, peer);
+
+            var playerToApply = Players[packet.ProfileId];
             if (playerToApply != default && playerToApply != null)
             {
                 playerToApply.HealthPackets.Enqueue(packet);
@@ -89,9 +165,9 @@ namespace StayInTarkov.Networking
                 return;
 
             _dataWriter.Reset();
-            SendDataToAll(_dataWriter, ref packet, DeliveryMethod.ReliableOrdered);
+            SendDataToAll(_dataWriter, ref packet, DeliveryMethod.ReliableOrdered, peer);
 
-            var playerToApply = Players[packet.ProfileId] as CoopPlayer;
+            var playerToApply = Players[packet.ProfileId];
             if (playerToApply != default && playerToApply != null && !playerToApply.IsYourPlayer)
             {
                 playerToApply.FirearmPackets.Enqueue(packet);
@@ -153,7 +229,10 @@ namespace StayInTarkov.Networking
             if (!Players.ContainsKey(packet.ProfileId))
                 return;
 
-            var playerToApply = Players[packet.ProfileId] as CoopPlayer;
+            _dataWriter.Reset();
+            SendDataToAll(_dataWriter, ref packet, DeliveryMethod.ReliableOrdered, peer);
+
+            var playerToApply = Players[packet.ProfileId];
             if (playerToApply != default && playerToApply != null && !playerToApply.IsYourPlayer)
             {
                 playerToApply.NewState = packet;
@@ -177,10 +256,13 @@ namespace StayInTarkov.Networking
                 _netServer.Stop();
         }
 
-        public void SendDataToAll<T>(NetDataWriter writer, ref T packet, DeliveryMethod deliveryMethod) where T : INetSerializable
+        public void SendDataToAll<T>(NetDataWriter writer, ref T packet, DeliveryMethod deliveryMethod, NetPeer peer = null) where T : INetSerializable
         {
             _packetProcessor.WriteNetSerializable(writer, ref packet);
-            _netServer.SendToAll(writer, deliveryMethod);
+            if (peer != null)
+                _netServer.SendToAll(writer, deliveryMethod, peer);
+            else
+                _netServer.SendToAll(writer, deliveryMethod);
         }
 
         public void SendDataToPeer<T>(NetPeer peer, NetDataWriter writer, ref T packet, DeliveryMethod deliveryMethod) where T : INetSerializable

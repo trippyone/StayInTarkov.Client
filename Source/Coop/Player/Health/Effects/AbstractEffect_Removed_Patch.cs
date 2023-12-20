@@ -1,5 +1,6 @@
 ﻿using EFT.HealthSystem;
 using StayInTarkov.Coop.Matchmaker;
+using StayInTarkov.Coop.Players;
 using System;
 using System.Collections.Generic;
 using System.Reflection;

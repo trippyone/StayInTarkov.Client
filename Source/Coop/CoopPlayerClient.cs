@@ -1,4 +1,5 @@
 ﻿using Comfort.Common;
+using StayInTarkov.Coop.Players;
 using UnityEngine;
 using static EFT.ClientPlayer;
 

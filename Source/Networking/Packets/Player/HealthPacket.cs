@@ -28,6 +28,8 @@ namespace StayInTarkov.Networking.Packets
         public AddEffectPacket AddEffectPacket { get; set; }
         public bool HasRemoveEffect { get; set; }
         public RemoveEffectPacket RemoveEffectPacket { get; set; }
+        public bool HasObservedDeathPacket { get; set; }
+        public ObservedDeathPacket ObservedDeathPacket { get; set; }
 
         public HealthPacket(string profileId)
         {
@@ -39,6 +41,7 @@ namespace StayInTarkov.Networking.Packets
             HasHydrationChange = false;
             HasAddEffect = false;
             HasRemoveEffect = false;
+            HasObservedDeathPacket = false;
         }
 
         public void Deserialize(NetDataReader reader)
@@ -65,6 +68,9 @@ namespace StayInTarkov.Networking.Packets
             HasRemoveEffect = reader.GetBool();
             if (HasRemoveEffect)
                 RemoveEffectPacket = RemoveEffectPacket.Deserialize(reader);
+            HasObservedDeathPacket = reader.GetBool();
+            if (HasObservedDeathPacket)
+                ObservedDeathPacket = ObservedDeathPacket.Deserialize(reader);
         }
 
         public void Serialize(NetDataWriter writer)
@@ -91,6 +97,9 @@ namespace StayInTarkov.Networking.Packets
             writer.Put(HasRemoveEffect);
             if (HasRemoveEffect)
                 RemoveEffectPacket.Serialize(writer, RemoveEffectPacket);
+            writer.Put(HasObservedDeathPacket);
+            if (HasObservedDeathPacket)
+                ObservedDeathPacket.Serialize(writer, ObservedDeathPacket);
         }
 
         public void ToggleSend()

@@ -1,8 +1,11 @@
-﻿using LiteNetLib;
+﻿using EFT;
+using LiteNetLib;
 using LiteNetLib.Utils;
+using Sirenix.Serialization;
 using StayInTarkov.Configuration;
 using StayInTarkov.Coop;
 using StayInTarkov.Coop.Matchmaker;
+using StayInTarkov.Coop.Players;
 using StayInTarkov.Networking.Packets;
 using System;
 using System.Collections.Concurrent;
@@ -22,8 +25,9 @@ namespace StayInTarkov.Networking
     public class SITClient : MonoBehaviour, INetEventListener
     {
         private LiteNetLib.NetManager _netClient;
-        public CoopPlayer Player { get; set; }
-        public ConcurrentDictionary<string, EFT.Player> Players => CoopGameComponent.Players;
+        private NetDataWriter _dataWriter = new();
+        public CoopPlayer MyPlayer { get; set; }
+        public ConcurrentDictionary<string, CoopPlayer> Players => CoopGameComponent.Players;
         private CoopGameComponent CoopGameComponent { get; set; }
         public NetPacketProcessor _packetProcessor = new();
 
@@ -39,6 +43,8 @@ namespace StayInTarkov.Networking
             _packetProcessor.SubscribeNetSerializable<WeaponPacket, NetPeer>(OnFirearmControllerPacketReceived);
             _packetProcessor.SubscribeNetSerializable<HealthPacket, NetPeer>(OnHealthPacketReceived);
             _packetProcessor.SubscribeNetSerializable<InventoryPacket, NetPeer>(OnInventoryPacketReceived);
+            _packetProcessor.SubscribeNetSerializable<CommonPlayerPacket, NetPeer>(OnCommonPlayerPacketReceived);
+            _packetProcessor.SubscribeNetSerializable<AllCharacterRequestPacket, NetPeer>(OnAllCharacterRequestPacketReceived);
 
             _netClient = new LiteNetLib.NetManager(this)
             {
@@ -53,12 +59,56 @@ namespace StayInTarkov.Networking
             _netClient.Connect(PluginConfigSettings.Instance.CoopSettings.SITGamePlayIP, PluginConfigSettings.Instance.CoopSettings.SITGamePlayPort, "sit.core");
         }
 
+        private void OnAllCharacterRequestPacketReceived(AllCharacterRequestPacket packet, NetPeer peer)
+        {
+            if (!packet.IsRequest)
+            {
+                EFT.UI.ConsoleScreen.Log($"Received CharacterRequest! ProfileID: {packet.PlayerInfo.Profile.ProfileId}, Nickname: {packet.PlayerInfo.Profile.Nickname}");
+                if (packet.ProfileId != MyPlayer.ProfileId)
+                {
+                    if (!CoopGameComponent.PlayersToSpawn.ContainsKey(packet.PlayerInfo.Profile.ProfileId))
+                        CoopGameComponent.PlayersToSpawn.TryAdd(packet.PlayerInfo.Profile.ProfileId, ESpawnState.None);
+                    if (!CoopGameComponent.PlayersToSpawnProfiles.ContainsKey(packet.PlayerInfo.Profile.ProfileId))
+                        CoopGameComponent.PlayersToSpawnProfiles.Add(packet.PlayerInfo.Profile.ProfileId, packet.PlayerInfo.Profile);
+
+                    CoopGameComponent.TestCreateObserved(packet.PlayerInfo.Profile, new Vector3(0, 100, 0), packet.IsAlive);
+                }
+            }
+            else if (packet.IsRequest)
+            {
+                EFT.UI.ConsoleScreen.Log($"Received CharacterRequest from server, send my Profile.");
+                AllCharacterRequestPacket requestPacket = new(MyPlayer.ProfileId)
+                {
+                    IsRequest = false,
+                    PlayerInfo = new()
+                    {
+                        Profile = MyPlayer.Profile
+                    },
+                    IsAlive = MyPlayer.ActiveHealthController.IsAlive
+                };
+                _dataWriter.Reset();
+                SendData(_dataWriter, ref requestPacket, DeliveryMethod.ReliableOrdered);
+            }
+        }
+
+        private void OnCommonPlayerPacketReceived(CommonPlayerPacket packet, NetPeer peer)
+        {
+            if (!Players.ContainsKey(packet.ProfileId))
+                return;
+
+            var playerToApply = Players[packet.ProfileId];
+            if (playerToApply != default && playerToApply != null)
+            {
+                playerToApply.CommonPlayerPackets.Enqueue(packet);
+            }
+        }
+
         private void OnInventoryPacketReceived(InventoryPacket packet, NetPeer peer)
         {
             if (!Players.ContainsKey(packet.ProfileId))
                 return;
 
-            var playerToApply = Players[packet.ProfileId] as CoopPlayer;
+            var playerToApply = Players[packet.ProfileId];
             if (playerToApply != default && playerToApply != null)
             {
                 playerToApply.InventoryPackets.Enqueue(packet);
@@ -71,7 +121,7 @@ namespace StayInTarkov.Networking
             if (!Players.ContainsKey(packet.ProfileId))
                 return;
 
-            var playerToApply = Players[packet.ProfileId] as CoopPlayer;
+            var playerToApply = Players[packet.ProfileId];
             if (playerToApply != default && playerToApply != null)
             {
                 playerToApply.HealthPackets.Enqueue(packet);
@@ -83,7 +133,7 @@ namespace StayInTarkov.Networking
             if (!Players.ContainsKey(packet.ProfileId))
                 return;
 
-            var playerToApply = Players[packet.ProfileId] as CoopPlayer;
+            var playerToApply = Players[packet.ProfileId];
             if (playerToApply != default && playerToApply != null && !playerToApply.IsYourPlayer)
             {
                 playerToApply.FirearmPackets.Enqueue(packet);
@@ -216,7 +266,7 @@ namespace StayInTarkov.Networking
             if (!Players.ContainsKey(packet.ProfileId))
                 return;
 
-            var playerToApply = Players[packet.ProfileId] as CoopPlayer;
+            var playerToApply = Players[packet.ProfileId];
             if (playerToApply != default && playerToApply != null && !playerToApply.IsYourPlayer)
             {
                 playerToApply.NewState = packet;

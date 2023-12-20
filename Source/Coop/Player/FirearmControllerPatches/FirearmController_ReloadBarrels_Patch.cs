@@ -1,4 +1,5 @@
 ﻿using StayInTarkov.Coop.Matchmaker;
+using StayInTarkov.Coop.Players;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,15 +14,51 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
 
         protected override MethodBase GetTargetMethod()
         {
-            var method = ReflectionHelpers.GetMethodForType(InstanceType, MethodName);
-            return method;
+            return ReflectionHelpers.GetMethodForType(InstanceType, MethodName);
         }
 
         [PatchPostfix]
         public static void PostPatch(EFT.Player.FirearmController __instance, AmmoPack ammoPack, GridItemAddress placeToPutContainedAmmoMagazine, EFT.Player ____player)
         {
+            var botPlayer = ____player as CoopBot;
+            if (botPlayer != null)
+            {
+                GridItemAddressDescriptor gridItemAddressDescriptor1 = (placeToPutContainedAmmoMagazine == null) ? null : OperationToDescriptorHelpers.FromGridItemAddress(placeToPutContainedAmmoMagazine);
+
+                var ammoIds1 = ammoPack.GetReloadingAmmoIds();
+
+                using (MemoryStream memoryStream = new())
+                {
+                    using BinaryWriter binaryWriter = new(memoryStream);
+                    byte[] locationDescription;
+                    if (gridItemAddressDescriptor1 != null)
+                    {
+                        binaryWriter.Write(gridItemAddressDescriptor1);
+                        locationDescription = memoryStream.ToArray();
+                    }
+                    else
+                    {
+                        locationDescription = new byte[0];
+                    }
+
+                    EFT.UI.ConsoleScreen.Log("Firing away ReloadMag packet!");
+
+                    botPlayer.WeaponPacket.HasReloadBarrelsPacket = true;
+                    botPlayer.WeaponPacket.ReloadBarrels = new()
+                    {
+                        Reload = true,
+                        AmmoIdsCount = ammoIds1.Length,
+                        AmmoIds = ammoIds1,
+                        LocationLength = locationDescription.Length,
+                        LocationDescription = locationDescription,
+                    };
+                    botPlayer.WeaponPacket.ToggleSend();
+                }
+                return;
+            }
+
             var player = ____player as CoopPlayer;
-            if (player == null || !player.IsYourPlayer && (!MatchmakerAcceptPatches.IsServer && !player.IsAI))
+            if (player == null || !player.IsYourPlayer)
                 return;
 
             GridItemAddressDescriptor gridItemAddressDescriptor = (placeToPutContainedAmmoMagazine == null) ? null : OperationToDescriptorHelpers.FromGridItemAddress(placeToPutContainedAmmoMagazine);
@@ -44,6 +81,7 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
 
                 EFT.UI.ConsoleScreen.Log("Firing away ReloadMag packet!");
 
+                player.WeaponPacket.HasReloadBarrelsPacket = true;
                 player.WeaponPacket.ReloadBarrels = new()
                 {
                     Reload = true,
@@ -54,40 +92,6 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
                 };
                 player.WeaponPacket.ToggleSend();
             }
-
-            //if (CallLocally.Contains(player.ProfileId))
-            //{
-            //    CallLocally.Remove(player.ProfileId);
-            //    return;
-            //}
-
-            //Dictionary<string, object> magAddressDict = new();
-            //ItemAddressHelpers.ConvertItemAddressToDescriptor(magazine.CurrentAddress, ref magAddressDict);
-
-            //Dictionary<string, object> gridAddressDict = new();
-            //ItemAddressHelpers.ConvertItemAddressToDescriptor(gridItemAddress, ref gridAddressDict);
-
-            //Dictionary<string, object> dictionary = new()
-            //{
-            //    { "fa.id", __instance.Item.Id },
-            //    { "fa.tpl", __instance.Item.TemplateId },
-            //    { "mg.id", magazine.Id },
-            //    { "mg.tpl", magazine.TemplateId },
-            //    { "ma", magAddressDict },
-            //    { "ga", gridAddressDict },
-            //    { "m", "ReloadMag" }
-            //};
-            //AkiBackendCommunicationCoop.PostLocalPlayerData(player, dictionary);
-            //GetLogger().LogDebug("FirearmController_ReloadMag_Patch:PostPatch");
-
-            // ---------------------------------------------------------------------------------------------------------------------
-            // Note. If the player is AI or High Ping. Stop the loop caused by the sent packet above
-            //if (IsHighPingOrAI(player))
-            //{
-            //HasProcessed(typeof(FirearmController_ReloadMag_Patch), player, dictionary);
-            //}
-
-            //ItemControllerHandler_Move_Patch.DisableForPlayer.RemoveWhere(x => x == player.ProfileId);
         }
 
 
