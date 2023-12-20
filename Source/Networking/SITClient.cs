@@ -30,6 +30,7 @@ namespace StayInTarkov.Networking
         public ConcurrentDictionary<string, CoopPlayer> Players => CoopGameComponent.Players;
         private CoopGameComponent CoopGameComponent { get; set; }
         public NetPacketProcessor _packetProcessor = new();
+        public int Ping = 0;
 
         public void Start()
         {
@@ -334,7 +335,7 @@ namespace StayInTarkov.Networking
 
         public void OnNetworkLatencyUpdate(NetPeer peer, int latency)
         {
-
+            Ping = latency;
         }
 
         public void OnConnectionRequest(LiteNetLib.ConnectionRequest request)

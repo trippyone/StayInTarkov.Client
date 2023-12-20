@@ -424,7 +424,7 @@ namespace StayInTarkov
             }
             string errorMessage = stringBuilder.ToString();
 
-            DisplayMessageNotifications.DisplayMessageNotification($"{errorMessage}", ENotificationDurationType.Infinite, ENotificationIconType.Alert, UnityEngine.Color.red);
+            NotificationManagerClass.DisplayMessageNotification($"{errorMessage}", ENotificationDurationType.Infinite, ENotificationIconType.Alert, UnityEngine.Color.red);
 
             // Show an error in the BepInEx console/log file
             Logger.LogError(errorMessage);

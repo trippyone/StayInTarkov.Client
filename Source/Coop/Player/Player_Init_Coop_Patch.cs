@@ -80,7 +80,7 @@ namespace StayInTarkov.Coop.Player
                 PluginConfigSettings.Instance.CoopSettings.SETTING_ShowFeed
                 && (__instance.ProfileId.StartsWith("pmc") || __instance.ProfileId.StartsWith("scav"))
                 )
-                DisplayMessageNotifications.DisplayMessageNotification($"{__instance.Profile.Nickname}[{__instance.Side}][{__instance.Profile.Info.Settings.Role}] has spawned");
+                NotificationManagerClass.DisplayMessageNotification($"{__instance.Profile.Nickname}[{__instance.Side}][{__instance.Profile.Info.Settings.Role}] has spawned");
 
         }
 

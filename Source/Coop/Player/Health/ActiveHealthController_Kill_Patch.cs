@@ -37,16 +37,13 @@ namespace StayInTarkov.Coop.Player.Health
         }
 
         //[PatchPrefix]
-        //public static bool PrePatch(
-        //    ActiveHealthController __instance
-        //    )
+        //public static bool PrePatch(ActiveHealthController __instance)
         //{
-        //    var player = __instance.Player;
-
-        //    var result = false;
-        //    if (CallLocally.TryGetValue(player.ProfileId, out var expecting) && expecting)
-        //        result = true;
-        //    return result;
+        //    var player = __instance.Player as ObservedCoopPlayer;
+        //    if (player == null && !player.IsAI)
+        //        return false;
+        //    else
+        //        return true;
         //}
 
         [PatchPostfix]
@@ -79,7 +76,7 @@ namespace StayInTarkov.Coop.Player.Health
             }
 
             var observedPlayer = __instance.Player as ObservedCoopPlayer;
-            if (observedPlayer != null)
+            if (observedPlayer != null && observedPlayer.IsAI)
             {
                 EFT.UI.ConsoleScreen.Log("Kill Patch observedplayer");
                 observedPlayer.HealthPacket.HasObservedDeathPacket = true;

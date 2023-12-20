@@ -3,6 +3,7 @@ using EFT;
 using EFT.Interactive;
 using EFT.InventoryLogic;
 using EFT.UI;
+using EFT.Weather;
 using StayInTarkov.Configuration;
 using StayInTarkov.Coop.Components;
 using StayInTarkov.Coop.Matchmaker;
@@ -10,7 +11,6 @@ using StayInTarkov.Coop.Player;
 using StayInTarkov.Coop.Players;
 using StayInTarkov.Coop.Web;
 using StayInTarkov.Core.Player;
-using StayInTarkov.EssentialPatches;
 using StayInTarkov.Memory;
 using StayInTarkov.Networking;
 using StayInTarkov.Networking.Packets;
@@ -18,7 +18,6 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -93,6 +92,7 @@ namespace StayInTarkov.Coop
         public ConcurrentDictionary<string, Vector3> PlayersToSpawnPositions { get; private set; } = new();
 
         public List<EFT.LocalPlayer> SpawnedPlayersToFinalize { get; private set; } = new();
+        public CoopPlayer MyPlayer => Singleton<GameWorld>.Instance.MainPlayer as CoopPlayer;
 
         public BlockingCollection<Dictionary<string, object>> ActionPackets => ActionPacketHandler.ActionPackets;
 
@@ -204,13 +204,13 @@ namespace StayInTarkov.Coop
             // Run an immediate call to get characters in the server
             if (MatchmakerAcceptPatches.IsClient)
             {
-                ReadFromServerCharacters(); 
+                ReadFromServerCharacters();
             }
 
             // Get a Result of Characters within an interval loop
             if (MatchmakerAcceptPatches.IsClient)
             {
-                _ = Task.Run(() => ReadFromServerCharactersLoop()); 
+                _ = Task.Run(() => ReadFromServerCharactersLoop());
             }
 
             // Process the Characters retrieved from the previous loop
@@ -362,7 +362,7 @@ namespace StayInTarkov.Coop
                             player.SwitchRenderer(false);
 
                             // TODO: Currently. Destroying your own Player just breaks the game and it appears to be "frozen". Need to learn a new way to do a FreeCam!
-                            if(Singleton<GameWorld>.Instance.MainPlayer.ProfileId != profileId)
+                            if (Singleton<GameWorld>.Instance.MainPlayer.ProfileId != profileId)
                                 GameObject.Destroy(player);
                         }
                     }
@@ -370,7 +370,7 @@ namespace StayInTarkov.Coop
             }
         }
 
-        private HashSet<string> ExtractedProfilesSent = new();  
+        private HashSet<string> ExtractedProfilesSent = new();
 
         void OnDestroy()
         {
@@ -499,7 +499,7 @@ namespace StayInTarkov.Coop
                 if (MatchmakerAcceptPatches.IsServer)
                 {
                     // A host needs to wait for the team to extract or die!
-                    if((PlayerUsers.Count() > 1) && (quitState == EQuitState.YouAreDeadAsHost || quitState == EQuitState.YouHaveExtractedOnlyAsHost))
+                    if ((PlayerUsers.Count() > 1) && (quitState == EQuitState.YouAreDeadAsHost || quitState == EQuitState.YouHaveExtractedOnlyAsHost))
                     {
                         NotificationManagerClass.DisplayWarningNotification("HOSTING: You cannot exit the game until all clients have escaped or dead");
                         RequestQuitGame = false;
@@ -509,14 +509,14 @@ namespace StayInTarkov.Coop
                     {
                         Singleton<ISITGame>.Instance.Stop(Singleton<GameWorld>.Instance.MainPlayer.ProfileId,
                             Singleton<ISITGame>.Instance.MyExitStatus,
-                            Singleton<ISITGame>.Instance.MyExitLocation,0);
+                            Singleton<ISITGame>.Instance.MyExitLocation, 0);
                     }
                 }
                 else
                 {
                     Singleton<ISITGame>.Instance.Stop(Singleton<GameWorld>.Instance.MainPlayer.ProfileId,
                         Singleton<ISITGame>.Instance.MyExitStatus,
-                        Singleton<ISITGame>.Instance.MyExitLocation,0);
+                        Singleton<ISITGame>.Instance.MyExitLocation, 0);
                 }
                 return;
             }
@@ -625,7 +625,7 @@ namespace StayInTarkov.Coop
 
             while (RunAsyncTasks)
             {
-                await Task.Delay(10000);
+                await Task.Delay(5000);
 
                 if (Players == null)
                     continue;
@@ -1050,7 +1050,7 @@ namespace StayInTarkov.Coop
             // If this is an actual PLAYER player that we're creating a drone for, when we set
             // aiControl to true then they'll automatically run voice lines (eg when throwing
             // a grenade) so we need to make sure it's set to FALSE for the drone version of them.
-            var useAiControl = !profile.Id.StartsWith("pmc");
+            var isAI = !profile.Id.StartsWith("pmc");
 
             // For actual bots, we can gain SIGNIFICANT clientside performance on the
             // non-host client by ENABLING aiControl for the bot. This has zero consequences
@@ -1059,7 +1059,7 @@ namespace StayInTarkov.Coop
             // "player controlled", where the engine has to enable a bunch of additional
             // logic when aiControl is turned off (in other words, for players)?
 
-            if (!useAiControl)
+            if (!isAI)
             {
                 var myPlayer = Singleton<GameWorld>.Instance.MainPlayer as CoopPlayer;
                 position = new Vector3(myPlayer.Transform.position.x, myPlayer.Transform.position.y + 0.25f, myPlayer.Transform.position.z);
@@ -1074,7 +1074,7 @@ namespace StayInTarkov.Coop
                 "",
                 EPointOfView.ThirdPerson,
                 profile,
-                aiControl: useAiControl,
+                isAI,
                 EUpdateQueue.Update,
                 EFT.Player.EUpdateMode.Manual,
                 EFT.Player.EUpdateMode.Auto,
@@ -1112,17 +1112,25 @@ namespace StayInTarkov.Coop
                 {
                     if (LocalGameInstance != null)
                     {
-                        var botController = (BotsController)ReflectionHelpers.GetFieldFromTypeByFieldType(typeof(BaseLocalGame<GamePlayerOwner>), typeof(BotsController)).GetValue(this.LocalGameInstance);
+                        var botController = (BotsController)ReflectionHelpers.GetFieldFromTypeByFieldType(typeof(BaseLocalGame<GamePlayerOwner>), typeof(BotsController)).GetValue(LocalGameInstance);
                         if (botController != null)
                         {
-                            Logger.LogDebug("Adding Client Player to Enemy list");
-                            botController.AddActivePLayer(otherPlayer);
+                            if (botController.BotSpawner != null)
+                            {
+                                Logger.LogDebug($"Adding Client {otherPlayer.Profile.Nickname} to Enemy list");
+                                botController.AddActivePLayer(otherPlayer);
+                            }
+                            else
+                            {
+                                // Start Coroutine as botController might need a while to start sometimes...
+                                StartCoroutine(AddClientToBotEnemies(botController, otherPlayer));
+                            }
                         }
                     }
                 }
             }
 
-            if (useAiControl)
+            if (isAI)
             {
                 if (profile.Info.Side == EPlayerSide.Bear || profile.Info.Side == EPlayerSide.Usec)
                 {
@@ -1166,6 +1174,15 @@ namespace StayInTarkov.Coop
             SetWeaponInHandsOfNewPlayer(otherPlayer, () => { });
 
             return otherPlayer;
+        }
+
+        private IEnumerator AddClientToBotEnemies(BotsController botController, LocalPlayer playerToAdd)
+        {
+            yield return new WaitForSeconds(5);
+            Logger.LogDebug($"Adding Client {playerToAdd.Profile.Nickname} to Enemy list");
+            botController.AddActivePLayer(playerToAdd);
+            yield break;
+
         }
 
         /// <summary>
@@ -1365,6 +1382,11 @@ namespace StayInTarkov.Coop
             rect.y += 15;
             GUI.Label(rect, $"Host RTT:{(ServerPing + AkiBackendCommunication.Instance.HostPing)}");
             rect.y += 15;
+            if (MatchmakerAcceptPatches.IsClient)
+            {
+                GUI.Label(rect, $"UDP Ping:{MyPlayer.Client.Ping}");
+                rect.y += 15;
+            }
             GUI.contentColor = Color.white;
 
             if (PerformanceCheck_ActionPackets)
@@ -1528,7 +1550,7 @@ namespace StayInTarkov.Coop
                     labelStyle.fontSize = 14;
                     float labelOpacity = 1;
                     float distanceToCenter = Vector3.Distance(screenPos, new Vector3(Screen.width, Screen.height, 0) / 2);
-                    
+
                     if (distanceToCenter < 100)
                     {
                         labelOpacity = distanceToCenter / 100;

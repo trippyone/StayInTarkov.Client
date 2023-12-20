@@ -5,12 +5,9 @@ using EFT.HealthSystem;
 using EFT.Interactive;
 using EFT.InventoryLogic;
 using LiteNetLib.Utils;
-using Mono.Cecil.Cil;
 using StayInTarkov.Coop.ItemControllerPatches;
 using StayInTarkov.Coop.Matchmaker;
-using StayInTarkov.Coop.NetworkPacket;
 using StayInTarkov.Coop.PacketQueues;
-using StayInTarkov.Coop.Player.Proceed;
 using StayInTarkov.Core.Player;
 using StayInTarkov.Networking;
 using StayInTarkov.Networking.Packets;
@@ -168,7 +165,7 @@ namespace StayInTarkov.Coop.Players
         }
 
         public override void Proceed(bool withNetwork, Callback<IController> callback, bool scheduled = true)
-        {            
+        {
             base.Proceed(withNetwork, callback, scheduled);
             CommonPlayerPacket.HasProceedPacket = true;
             CommonPlayerPacket.ProceedPacket = new()
@@ -603,7 +600,7 @@ namespace StayInTarkov.Coop.Players
             {
                 HandleCommonPacket();
             }
-        }        
+        }
 
         protected virtual void HandleCommonPacket()
         {
@@ -678,7 +675,7 @@ namespace StayInTarkov.Coop.Players
                 {
                     CurrentManagedState.StartDoorInteraction(worldInteractiveObject,
                                 keyInteractionResult ?? interactionResult,
-                                keyInteractionResult == null ? null : () => keyInteractionResult.RaiseEvents(itemController, CommandStatus.Failed)); 
+                                keyInteractionResult == null ? null : () => keyInteractionResult.RaiseEvents(itemController, CommandStatus.Failed));
                 }
                 else
                 {
@@ -734,177 +731,177 @@ namespace StayInTarkov.Coop.Players
                 switch (packet.ProceedPacket.ProceedType)
                 {
                     case SITSerialization.EProceedType.EmptyHands:
-                    {
+                        {
                             EFT.UI.ConsoleScreen.Log("ProceedPacket was: EmptyHands");
                             base.Proceed(false, null, packet.ProceedPacket.Scheduled);
-                        break;
-                    }
+                            break;
+                        }
                     case SITSerialization.EProceedType.FoodDrink:
-                    {
+                        {
                             EFT.UI.ConsoleScreen.Log("ProceedPacket was: FoodDrink");
                             if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
-                        {
-                            if (item is FoodDrink foodDrink)
                             {
-                                base.Proceed(foodDrink, packet.ProceedPacket.Amount, null, packet.ProceedPacket.AnimationVariant, packet.ProceedPacket.Scheduled);
+                                if (item is FoodDrink foodDrink)
+                                {
+                                    base.Proceed(foodDrink, packet.ProceedPacket.Amount, null, packet.ProceedPacket.AnimationVariant, packet.ProceedPacket.Scheduled);
+                                }
+                                else
+                                {
+                                    EFT.UI.ConsoleScreen.Log($"Item {item} was not of type FoodDrink!");
+                                }
                             }
                             else
                             {
-                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type FoodDrink!");
+                                EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
                             }
+                            break;
                         }
-                        else
-                        {
-                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
-                        }
-                        break;
-                    }
                     case SITSerialization.EProceedType.ThrowWeap:
-                    {
-                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: ThrowWeap");
-                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                         {
-                            if (item is ThrowWeap throwWeap)
+                            EFT.UI.ConsoleScreen.Log("ProceedPacket was: ThrowWeap");
+                            if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                             {
-                                base.Proceed(throwWeap, (Callback<IThrowableCallback>)null, packet.ProceedPacket.Scheduled);
+                                if (item is ThrowWeap throwWeap)
+                                {
+                                    base.Proceed(throwWeap, (Callback<IThrowableCallback>)null, packet.ProceedPacket.Scheduled);
+                                }
+                                else
+                                {
+                                    EFT.UI.ConsoleScreen.Log($"Item {item} was not of type ThrowWeap!");
+                                }
                             }
                             else
                             {
-                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type ThrowWeap!");
+                                EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
                             }
+                            break;
                         }
-                        else
-                        {
-                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
-                        }
-                        break;
-                    }
                     case SITSerialization.EProceedType.Meds:
-                    {
-                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: Meds");
-                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                         {
-                            if (item is Meds meds)
+                            EFT.UI.ConsoleScreen.Log("ProceedPacket was: Meds");
+                            if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                             {
-                                base.Proceed(meds, packet.ProceedPacket.BodyPart, null, packet.ProceedPacket.AnimationVariant, packet.ProceedPacket.Scheduled);
+                                if (item is Meds meds)
+                                {
+                                    base.Proceed(meds, packet.ProceedPacket.BodyPart, null, packet.ProceedPacket.AnimationVariant, packet.ProceedPacket.Scheduled);
+                                }
+                                else
+                                {
+                                    EFT.UI.ConsoleScreen.Log($"Item {item} was not of type FoodDrink!");
+                                }
                             }
                             else
                             {
-                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type FoodDrink!");
+                                EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
                             }
+                            break;
                         }
-                        else
-                        {
-                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
-                        }
-                        break;
-                    }
                     case SITSerialization.EProceedType.QuickGrenadeThrow:
-                    {
-                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: QuickGrenadeThrow");
-                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                         {
-                            if (item is ThrowWeap throwWeap)
+                            EFT.UI.ConsoleScreen.Log("ProceedPacket was: QuickGrenadeThrow");
+                            if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                             {
-                                Proceed(throwWeap, (Callback<IGrenadeQuickUseController>)null, packet.ProceedPacket.Scheduled);
+                                if (item is ThrowWeap throwWeap)
+                                {
+                                    Proceed(throwWeap, (Callback<IGrenadeQuickUseController>)null, packet.ProceedPacket.Scheduled);
+                                }
+                                else
+                                {
+                                    EFT.UI.ConsoleScreen.Log($"Item {item} was not of type ThrowWeap!");
+                                }
                             }
                             else
                             {
-                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type ThrowWeap!");
+                                EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
                             }
+                            break;
                         }
-                        else
-                        {
-                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
-                        }
-                        break;
-                    }
                     case SITSerialization.EProceedType.QuickKnifeKick:
-                    {
-                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: QuickKnifeKick");
-                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                         {
-                            if (item.TryGetItemComponent(out KnifeComponent knifeComponent))
+                            EFT.UI.ConsoleScreen.Log("ProceedPacket was: QuickKnifeKick");
+                            if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                             {
-                                Proceed(knifeComponent, (Callback<IQuickKnifeKickController>)null, packet.ProceedPacket.Scheduled);
+                                if (item.TryGetItemComponent(out KnifeComponent knifeComponent))
+                                {
+                                    Proceed(knifeComponent, (Callback<IQuickKnifeKickController>)null, packet.ProceedPacket.Scheduled);
+                                }
+                                else
+                                {
+                                    EFT.UI.ConsoleScreen.Log($"Item {item} was not of type KnifeComponent!");
+                                }
                             }
                             else
                             {
-                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type KnifeComponent!");
+                                EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
                             }
+                            break;
                         }
-                        else
-                        {
-                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
-                        }
-                        break;
-                    }
                     case SITSerialization.EProceedType.QuickUse:
-                    {
-                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: QuickUse");
-                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                         {
-                            base.Proceed(item, null, packet.ProceedPacket.Scheduled);
+                            EFT.UI.ConsoleScreen.Log("ProceedPacket was: QuickUse");
+                            if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
+                            {
+                                base.Proceed(item, null, packet.ProceedPacket.Scheduled);
+                            }
+                            else
+                            {
+                                EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
+                            }
+                            break;
                         }
-                        else
-                        {
-                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
-                        }
-                        break;
-                    }
                     case SITSerialization.EProceedType.Weapon:
-                    {
-                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: Weapon");
-                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                         {
-                            if (item is Weapon weapon)
+                            EFT.UI.ConsoleScreen.Log("ProceedPacket was: Weapon");
+                            if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                             {
-                                base.Proceed(weapon, null, packet.ProceedPacket.Scheduled);
+                                if (item is Weapon weapon)
+                                {
+                                    base.Proceed(weapon, null, packet.ProceedPacket.Scheduled);
+                                }
+                                else
+                                {
+                                    EFT.UI.ConsoleScreen.Log($"Item {item} was not of type Weapon!");
+                                }
                             }
                             else
                             {
-                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type Weapon!");
+                                EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
                             }
+                            break;
                         }
-                        else
-                        {
-                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
-                        }
-                        break;
-                    }
                     case SITSerialization.EProceedType.Knife:
-                    {
-                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: Knife");
-                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                         {
-                            if (item.TryGetItemComponent(out KnifeComponent knifeComponent))
+                            EFT.UI.ConsoleScreen.Log("ProceedPacket was: Knife");
+                            if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                             {
-                                base.Proceed(knifeComponent, (Callback<IKnifeController>)null, packet.ProceedPacket.Scheduled);
+                                if (item.TryGetItemComponent(out KnifeComponent knifeComponent))
+                                {
+                                    base.Proceed(knifeComponent, (Callback<IKnifeController>)null, packet.ProceedPacket.Scheduled);
+                                }
+                                else
+                                {
+                                    EFT.UI.ConsoleScreen.Log($"Item {item} was not of type KnifeComponent!");
+                                }
                             }
                             else
                             {
-                                EFT.UI.ConsoleScreen.Log($"Item {item} was not of type KnifeComponent!");
+                                EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
                             }
+                            break;
                         }
-                        else
-                        {
-                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
-                        }
-                        break;
-                    }
                     case SITSerialization.EProceedType.TryProceed:
-                    {
-                        EFT.UI.ConsoleScreen.Log("ProceedPacket was: TryProceed");
-                        if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
                         {
-                            TryProceed(item, null, packet.ProceedPacket.Scheduled);
+                            EFT.UI.ConsoleScreen.Log("ProceedPacket was: TryProceed");
+                            if (ItemFinder.TryFindItem(packet.ProceedPacket.ItemId, out Item item))
+                            {
+                                TryProceed(item, null, packet.ProceedPacket.Scheduled);
+                            }
+                            else
+                            {
+                                EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
+                            }
+                            break;
                         }
-                        else
-                        {
-                            EFT.UI.ConsoleScreen.Log($"Could not find ItemID {packet.ProceedPacket.ItemId}");
-                        }
-                        break;
-                    }
                 }
             }
 
@@ -993,10 +990,44 @@ namespace StayInTarkov.Coop.Players
             * You are free to re-use this in your own project, but out of respect please leave credit where it's due according to the MIT License
             */
 
+            // Drop current weapon
+            // Jamming
+
             var firearmController = HandsController as FirearmController;
             var packet = FirearmPackets.Dequeue();
             if (firearmController != null)
             {
+                if (packet.HasMalfunction)
+                {
+                    firearmController.Weapon.MalfState.ChangeStateSilent(packet.MalfunctionState);
+                    //if (packet.MalfunctionState)
+                    //{
+                    //    firearmController.Weapon.MalfState.ChangeStateSilent(packet.MalfunctionState);
+                    //    //firearmController.Malfunction = true;
+                    //    //firearmController.FirearmsAnimator.MisfireSlideUnknown(true);
+                    //    //firearmController.FirearmsAnimator.Malfunction((int)packet.MalfunctionState);
+                    //    //switch (packet.MalfunctionState)
+                    //    //{
+                    //    //    case Weapon.EMalfunctionState.Misfire:
+                    //    //        firearmController.FirearmsAnimator.Animator.Play("MISFIRE", 1, 0f);
+                    //    //        break;
+                    //    //    case Weapon.EMalfunctionState.Jam:
+                    //    //        firearmController.FirearmsAnimator.Animator.Play("JAM", 1, 0f);
+                    //    //        break;
+                    //    //    case Weapon.EMalfunctionState.HardSlide:
+                    //    //        firearmController.FirearmsAnimator.Animator.Play("HARD_SLIDE", 1, 0f);
+                    //    //        break;
+                    //    //    case Weapon.EMalfunctionState.SoftSlide:
+                    //    //        firearmController.FirearmsAnimator.Animator.Play("SOFT_SLIDE", 1, 0f);
+                    //    //        break;
+                    //    //    case Weapon.EMalfunctionState.Feed:
+                    //    //        firearmController.FirearmsAnimator.Animator.Play("FEED", 1, 0f);
+                    //    //        break;
+                    //    //}
+                    //    //firearmController.EmitEvents(); 
+                    //}
+                }
+
                 firearmController.SetTriggerPressed(false);
                 if (packet.IsTriggerPressed)
                     firearmController.SetTriggerPressed(true);
@@ -1005,7 +1036,20 @@ namespace StayInTarkov.Coop.Players
                     firearmController.ChangeFireMode(packet.FireMode);
 
                 if (packet.ExamineWeapon)
+                {
+                    //Weapon weapon = firearmController.Weapon;
+                    //if (firearmController.Malfunction == true && weapon.MalfState.State != Weapon.EMalfunctionState.None)
+                    //{
+                    //    // GClass2623_0 = InventoryController
+                    //    firearmController.FirearmsAnimator.MisfireSlideUnknown(false);
+                    //    GClass2623_0.ExamineMalfunction(weapon);
+                    //}
+                    //else
+                    //{
+                    //    firearmController.ExamineWeapon();
+                    //}
                     firearmController.ExamineWeapon();
+                }
 
                 if (packet.ToggleAim)
                     firearmController.SetAim(packet.AimingIndex);
@@ -1035,127 +1079,145 @@ namespace StayInTarkov.Coop.Players
                 if (packet.EnableInventory)
                     firearmController.SetInventoryOpened(packet.InventoryStatus);
 
-                if (packet.ReloadMagPacket.Reload)
+                if (packet.HasReloadMagPacket)
                 {
-                    MagazineClass magazine;
-                    try
+                    if (packet.ReloadMagPacket.Reload)
                     {
-                        Item item = _inventoryController.FindItem(itemId: packet.ReloadMagPacket.MagId);
-                        magazine = item as MagazineClass;
-                        if (magazine == null)
-                        {
-                            EFT.UI.ConsoleScreen.LogError($"HandleFirearmPacket::ReloadMag could not cast {packet.ReloadMagPacket.MagId} as a magazine, got {item.ShortName}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        EFT.UI.ConsoleScreen.LogException(ex);
-                        EFT.UI.ConsoleScreen.LogError($"There is no item {packet.ReloadMagPacket.MagId} in profile {ProfileId}");
-                        throw;
-                    }
-                    GridItemAddress gridItemAddress = null;
-                    if (packet.ReloadMagPacket.LocationDescription != null)
-                    {
-                        using MemoryStream memoryStream = new(packet.ReloadMagPacket.LocationDescription);
-                        using BinaryReader binaryReader = new(memoryStream);
+                        MagazineClass magazine;
                         try
                         {
-                            if (packet.ReloadMagPacket.LocationDescription.Length != 0)
+                            Item item = _inventoryController.FindItem(itemId: packet.ReloadMagPacket.MagId);
+                            magazine = item as MagazineClass;
+                            if (magazine == null)
                             {
-                                GridItemAddressDescriptor descriptor = binaryReader.ReadEFTGridItemAddressDescriptor();
-                                gridItemAddress = _inventoryController.ToGridItemAddress(descriptor);
+                                EFT.UI.ConsoleScreen.LogError($"HandleFirearmPacket::ReloadMag could not cast {packet.ReloadMagPacket.MagId} as a magazine, got {item.ShortName}");
                             }
                         }
-                        catch (GException4 exception2)
+                        catch (Exception ex)
                         {
-                            Debug.LogException(exception2);
+                            EFT.UI.ConsoleScreen.LogException(ex);
+                            EFT.UI.ConsoleScreen.LogError($"There is no item {packet.ReloadMagPacket.MagId} in profile {ProfileId}");
+                            throw;
                         }
-                    }
-                    if (magazine != null && gridItemAddress != null)
-                        firearmController.ReloadMag(magazine, gridItemAddress, null);
-                    else
-                    {
-                        EFT.UI.ConsoleScreen.LogError("HandleFirearmPacket::ReloadMag final variables were null!");
+                        GridItemAddress gridItemAddress = null;
+                        if (packet.ReloadMagPacket.LocationDescription != null)
+                        {
+                            using MemoryStream memoryStream = new(packet.ReloadMagPacket.LocationDescription);
+                            using BinaryReader binaryReader = new(memoryStream);
+                            try
+                            {
+                                if (packet.ReloadMagPacket.LocationDescription.Length != 0)
+                                {
+                                    GridItemAddressDescriptor descriptor = binaryReader.ReadEFTGridItemAddressDescriptor();
+                                    gridItemAddress = _inventoryController.ToGridItemAddress(descriptor);
+                                }
+                            }
+                            catch (GException4 exception2)
+                            {
+                                Debug.LogException(exception2);
+                            }
+                        }
+                        if (magazine != null && gridItemAddress != null)
+                            firearmController.ReloadMag(magazine, gridItemAddress, null);
+                        else
+                        {
+                            EFT.UI.ConsoleScreen.LogError("HandleFirearmPacket::ReloadMag final variables were null!");
+                        }
                     }
                 }
 
-                if (packet.QuickReloadMag.Reload)
+                if (packet.HasQuickReloadMagPacket)
                 {
-                    MagazineClass magazine;
-                    try
+                    if (packet.QuickReloadMag.Reload)
                     {
-                        Item item = _inventoryController.FindItem(packet.QuickReloadMag.MagId);
-                        magazine = item as MagazineClass;
-                        if (magazine == null)
+                        MagazineClass magazine;
+                        try
                         {
-                            EFT.UI.ConsoleScreen.LogError($"HandleFirearmPacket::QuickReloadMag could not cast {packet.ReloadMagPacket.MagId} as a magazine, got {item.ShortName}");
+                            Item item = _inventoryController.FindItem(packet.QuickReloadMag.MagId);
+                            magazine = item as MagazineClass;
+                            if (magazine == null)
+                            {
+                                EFT.UI.ConsoleScreen.LogError($"HandleFirearmPacket::QuickReloadMag could not cast {packet.ReloadMagPacket.MagId} as a magazine, got {item.ShortName}");
+                            }
                         }
+                        catch (Exception ex)
+                        {
+                            EFT.UI.ConsoleScreen.LogException(ex);
+                            EFT.UI.ConsoleScreen.LogError($"There is no item {packet.ReloadMagPacket.MagId} in profile {ProfileId}");
+                            throw;
+                        }
+                        firearmController.QuickReloadMag(magazine, null);
                     }
-                    catch (Exception ex)
-                    {
-                        EFT.UI.ConsoleScreen.LogException(ex);
-                        EFT.UI.ConsoleScreen.LogError($"There is no item {packet.ReloadMagPacket.MagId} in profile {ProfileId}");
-                        throw;
-                    }
-                    firearmController.QuickReloadMag(magazine, null);
                 }
 
                 // Do we need a switch depending on the status or is that handled with SetTriggerPressed?
-                if (packet.ReloadWithAmmo.Reload && !packet.CylinderMag.Changed)
+                if (packet.HasReloadWithAmmoPacket)
                 {
-                    if (packet.ReloadWithAmmo.Status == SITSerialization.ReloadWithAmmoPacket.EReloadWithAmmoStatus.StartReload)
+                    if (packet.ReloadWithAmmo.Reload && !packet.CylinderMag.Changed)
                     {
-                        List<BulletClass> bullets = firearmController.FindAmmoByIds(packet.ReloadWithAmmo.AmmoIds);
-                        AmmoPack ammoPack = new(bullets);
-                        firearmController.ReloadWithAmmo(ammoPack, null);
-                    }
-                }
-
-                if (packet.ReloadWithAmmo.Reload && packet.CylinderMag.Changed)
-                {
-                    if (packet.ReloadWithAmmo.Status == SITSerialization.ReloadWithAmmoPacket.EReloadWithAmmoStatus.StartReload)
-                    {
-                        List<BulletClass> bullets = firearmController.FindAmmoByIds(packet.ReloadWithAmmo.AmmoIds);
-                        AmmoPack ammoPack = new(bullets);
-                        firearmController.ReloadCylinderMagazine(ammoPack, null);
-                    }
-                }
-
-                if (packet.ReloadLauncher.Reload)
-                {
-                    List<BulletClass> ammo = firearmController.FindAmmoByIds(packet.ReloadLauncher.AmmoIds);
-                    AmmoPack ammoPack = new(ammo);
-                    firearmController.ReloadGrenadeLauncher(ammoPack, null);
-                }
-
-                if (packet.ReloadBarrels.Reload)
-                {
-                    List<BulletClass> ammo = firearmController.FindAmmoByIds(packet.ReloadBarrels.AmmoIds);
-                    AmmoPack ammoPack = new(ammo);
-
-                    GridItemAddress gridItemAddress = null;
-                    if (packet.ReloadBarrels.LocationDescription != null && packet.ReloadBarrels.LocationDescription.Length != 0)
-                    {
-                        using MemoryStream memoryStream = new(packet.ReloadBarrels.LocationDescription);
-                        using BinaryReader binaryReader = new(memoryStream);
-                        try
+                        if (packet.ReloadWithAmmo.Status == SITSerialization.ReloadWithAmmoPacket.EReloadWithAmmoStatus.StartReload)
                         {
-                            if (packet.ReloadBarrels.LocationDescription.Length != 0)
+                            List<BulletClass> bullets = firearmController.FindAmmoByIds(packet.ReloadWithAmmo.AmmoIds);
+                            AmmoPack ammoPack = new(bullets);
+                            firearmController.ReloadWithAmmo(ammoPack, null);
+                        }
+                    }
+                }
+
+                if (packet.HasCylinderMagPacket)
+                {
+                    if (packet.ReloadWithAmmo.Reload && packet.CylinderMag.Changed)
+                    {
+                        if (packet.ReloadWithAmmo.Status == SITSerialization.ReloadWithAmmoPacket.EReloadWithAmmoStatus.StartReload)
+                        {
+                            List<BulletClass> bullets = firearmController.FindAmmoByIds(packet.ReloadWithAmmo.AmmoIds);
+                            AmmoPack ammoPack = new(bullets);
+                            firearmController.ReloadCylinderMagazine(ammoPack, null);
+                        }
+                    }
+                }
+
+                if (packet.HasReloadLauncherPacket)
+                {
+                    if (packet.ReloadLauncher.Reload)
+                    {
+                        List<BulletClass> ammo = firearmController.FindAmmoByIds(packet.ReloadLauncher.AmmoIds);
+                        AmmoPack ammoPack = new(ammo);
+                        firearmController.ReloadGrenadeLauncher(ammoPack, null);
+                    }
+                }
+
+                if (packet.HasReloadBarrelsPacket)
+                {
+                    if (packet.ReloadBarrels.Reload)
+                    {
+                        List<BulletClass> ammo = firearmController.FindAmmoByIds(packet.ReloadBarrels.AmmoIds);
+                        AmmoPack ammoPack = new(ammo);
+
+                        GridItemAddress gridItemAddress = null;
+                        if (packet.ReloadBarrels.LocationDescription != null && packet.ReloadBarrels.LocationDescription.Length != 0)
+                        {
+                            using MemoryStream memoryStream = new(packet.ReloadBarrels.LocationDescription);
+                            using BinaryReader binaryReader = new(memoryStream);
+                            try
                             {
-                                GridItemAddressDescriptor descriptor = binaryReader.ReadEFTGridItemAddressDescriptor();
-                                gridItemAddress = _inventoryController.ToGridItemAddress(descriptor);
+                                if (packet.ReloadBarrels.LocationDescription.Length != 0)
+                                {
+                                    GridItemAddressDescriptor descriptor = binaryReader.ReadEFTGridItemAddressDescriptor();
+                                    gridItemAddress = _inventoryController.ToGridItemAddress(descriptor);
+                                }
+                            }
+                            catch (GException4 exception2)
+                            {
+                                Debug.LogException(exception2);
                             }
                         }
-                        catch (GException4 exception2)
+                        if (ammoPack != null && gridItemAddress != null)
+                            firearmController.ReloadBarrels(ammoPack, gridItemAddress, null);
+                        else
                         {
-                            Debug.LogException(exception2);
+                            EFT.UI.ConsoleScreen.LogError("HandleFirearmPacket::ReloadMag final variables were null!");
                         }
-                    }
-                    if (ammoPack != null && gridItemAddress != null)
-                        firearmController.ReloadBarrels(ammoPack, gridItemAddress, null);
-                    else
-                    {
-                        EFT.UI.ConsoleScreen.LogError("HandleFirearmPacket::ReloadMag final variables were null!");
                     }
                 }
 
@@ -1181,30 +1243,30 @@ namespace StayInTarkov.Coop.Players
                     switch (packet.GrenadePacket.PacketType)
                     {
                         case SITSerialization.GrenadePacket.GrenadePacketType.ExamineWeapon:
-                        {
-                            controller.ExamineWeapon(); 
-                            break;
-                        }
+                            {
+                                controller.ExamineWeapon();
+                                break;
+                            }
                         case SITSerialization.GrenadePacket.GrenadePacketType.HighThrow:
-                        {
-                            controller.HighThrow();
-                            break;
-                        }
+                            {
+                                controller.HighThrow();
+                                break;
+                            }
                         case SITSerialization.GrenadePacket.GrenadePacketType.LowThrow:
-                        {
-                            controller.LowThrow();
-                            break;
-                        }
+                            {
+                                controller.LowThrow();
+                                break;
+                            }
                         case SITSerialization.GrenadePacket.GrenadePacketType.PullRingForHighThrow:
-                        {
-                            controller.PullRingForHighThrow();
-                            break;
-                        }
+                            {
+                                controller.PullRingForHighThrow();
+                                break;
+                            }
                         case SITSerialization.GrenadePacket.GrenadePacketType.PullRingForLowThrow:
-                        {
-                            controller.PullRingForLowThrow();
-                            break;
-                        }
+                            {
+                                controller.PullRingForLowThrow();
+                                break;
+                            }
                     }
                 }
                 else
