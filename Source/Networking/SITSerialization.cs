@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
+using System.Security.Policy;
 using System.Xml;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -1011,6 +1012,33 @@ namespace StayInTarkov.Networking
                 writer.Put((int)packet.BodyPart);
             }
 
+        }
+
+        public struct DropPacket
+        {
+            public bool FastDrop { get; set; }
+            public bool HasItemId { get; set; }
+            public string ItemId { get; set; }
+
+            public static DropPacket Deserialize(NetDataReader reader)
+            {
+                DropPacket packet = new()
+                {
+                    FastDrop = reader.GetBool(),
+                    HasItemId = reader.GetBool()
+                };
+                if (packet.HasItemId)
+                    packet.ItemId = reader.GetString();
+
+                return packet;
+            }
+            public static void Serialize(NetDataWriter writer, DropPacket packet)
+            {
+                writer.Put(packet.FastDrop);
+                writer.Put(packet.ItemId);
+                if (packet.HasItemId)
+                    writer.Put(packet.ItemId);
+            }
         }
 
         public enum EProceedType

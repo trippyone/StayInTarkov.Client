@@ -76,7 +76,7 @@ namespace StayInTarkov.Coop.Player.Health
             }
 
             var observedPlayer = __instance.Player as ObservedCoopPlayer;
-            if (observedPlayer != null && observedPlayer.IsAI)
+            if (observedPlayer != null && !observedPlayer.ProfileId.StartsWith("pmc")) // TODO: Check bool
             {
                 EFT.UI.ConsoleScreen.Log("Kill Patch observedplayer");
                 observedPlayer.HealthPacket.HasObservedDeathPacket = true;

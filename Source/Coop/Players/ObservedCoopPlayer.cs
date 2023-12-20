@@ -25,6 +25,7 @@ namespace StayInTarkov.Coop.Players
     {
         public CoopPlayer MainPlayer => Singleton<GameWorld>.Instance.MainPlayer as CoopPlayer;
         private float InterpolationRatio { get; set; } = 0.5f;
+        private bool IsObservedAi = true;
 
         public static async Task<LocalPlayer> CreateObservedPlayer(
             int playerId,
@@ -109,10 +110,17 @@ namespace StayInTarkov.Coop.Players
             // TODO: Send information on who shot us to prevent the end screen to be empty / kill feed being wrong
             // TODO: Do this on ApplyShot instead, and check if instigator is local
             // Also do check if it's a server and shooter is AI
+
             if (damageInfo.Player == null)
                 return;
 
             if (damageInfo.Player.iPlayer.Profile != MainPlayer.Profile)
+                return;
+
+            if (!IsObservedAi)
+                return;
+
+            if (damageInfo.DamageType == EDamageType.Fall)
                 return;
 
             HealthPacket.HasDamageInfo = true;
@@ -137,11 +145,6 @@ namespace StayInTarkov.Coop.Players
         {
             StopCoroutine(SendStatePacket());
             return CreateCorpse<Corpse>(MovementContext.Velocity);
-        }
-
-        public override void OnItemAddedOrRemoved(Item item, ItemAddress location, bool added)
-        {
-            base.OnItemAddedOrRemoved(item, location, added);
         }
 
         protected override void Interpolate()
@@ -234,23 +237,23 @@ namespace StayInTarkov.Coop.Players
         protected IEnumerator SpawnObservedPlayer()
         {
             yield return new WaitForSeconds(1);
-            Teleport(new Vector3(MainPlayer.Transform.position.x + 0.25f, MainPlayer.Transform.position.y + 2, MainPlayer.Transform.position.z + 0.25f));
+            Teleport(new Vector3(MainPlayer.Transform.position.x + 0.25f, MainPlayer.Transform.position.y + 5, MainPlayer.Transform.position.z + 0.25f));
             yield return new WaitForSeconds(2);
 
             if (Vector3.Distance(Position, NewState.Position) > 0.25)
             {
                 LastState = NewState;
                 EFT.UI.ConsoleScreen.LogError($"Spawn distance was too far on {Profile.Nickname}!");
-                Teleport(new Vector3(MainPlayer.Transform.position.x + 0.25f, MainPlayer.Transform.position.y + 2, MainPlayer.Transform.position.z + 0.25f));
+                Teleport(new Vector3(MainPlayer.Transform.position.x + 0.25f, MainPlayer.Transform.position.y + 5, MainPlayer.Transform.position.z + 0.25f));
             }
 
-            yield return new WaitForSeconds(1);
+            yield return new WaitForSeconds(10);
 
             if (Vector3.Distance(Position, NewState.Position) > 0.25)
             {
                 LastState = NewState;
                 EFT.UI.ConsoleScreen.LogError($"Spawn distance was too far on {Profile.Nickname} again!");
-                Teleport(new Vector3(NewState.Position.x + 0.25f, NewState.Position.y + 3, NewState.Position.z + 0.25f));
+                Teleport(new Vector3(NewState.Position.x + 0.25f, NewState.Position.y + 5, NewState.Position.z + 0.25f));
             }
 
             yield return new WaitForSeconds(2);
@@ -268,6 +271,9 @@ namespace StayInTarkov.Coop.Players
         protected override void Start()
         {
             Writer = new();
+
+            if (ProfileId.StartsWith("pmc"))
+                IsObservedAi = false;
 
             WeaponPacket = new(ProfileId);
             HealthPacket = new(ProfileId);

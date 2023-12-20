@@ -1115,16 +1115,8 @@ namespace StayInTarkov.Coop
                         var botController = (BotsController)ReflectionHelpers.GetFieldFromTypeByFieldType(typeof(BaseLocalGame<GamePlayerOwner>), typeof(BotsController)).GetValue(LocalGameInstance);
                         if (botController != null)
                         {
-                            if (botController.BotSpawner != null)
-                            {
-                                Logger.LogDebug($"Adding Client {otherPlayer.Profile.Nickname} to Enemy list");
-                                botController.AddActivePLayer(otherPlayer);
-                            }
-                            else
-                            {
-                                // Start Coroutine as botController might need a while to start sometimes...
-                                StartCoroutine(AddClientToBotEnemies(botController, otherPlayer));
-                            }
+                            // Start Coroutine as botController might need a while to start sometimes...
+                            StartCoroutine(AddClientToBotEnemies(botController, otherPlayer));
                         }
                     }
                 }
@@ -1179,10 +1171,19 @@ namespace StayInTarkov.Coop
         private IEnumerator AddClientToBotEnemies(BotsController botController, LocalPlayer playerToAdd)
         {
             yield return new WaitForSeconds(5);
-            Logger.LogDebug($"Adding Client {playerToAdd.Profile.Nickname} to Enemy list");
+            Logger.LogDebug($"Adding Client {playerToAdd.Profile.Nickname} to enemy list");
             botController.AddActivePLayer(playerToAdd);
-            yield break;
-
+            if (botController.BotSpawner != null)
+            {
+                for (int i = 0; i < botController.BotSpawner.PlayersCount; i++)
+                {
+                    if (botController.BotSpawner.GetPlayer(i) == playerToAdd)
+                    {
+                        Logger.LogDebug($"Verified that {playerToAdd.Profile.Nickname} was added to the enemy list.");
+                        yield break;
+                    }
+                }
+            }
         }
 
         /// <summary>

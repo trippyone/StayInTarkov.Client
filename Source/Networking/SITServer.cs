@@ -67,7 +67,6 @@ namespace StayInTarkov.Networking
         private void OnAllCharacterRequestPacketReceived(AllCharacterRequestPacket packet, NetPeer peer)
         {
             // This method needs to be refined. For some reason the ping-pong has to be run twice for it to work on the host?
-            EFT.UI.ConsoleScreen.Log("Received CharacterRequest");
             if (packet.IsRequest)
             {
                 foreach (var player in CoopGameComponent.Players.Values)

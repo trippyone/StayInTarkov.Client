@@ -1,6 +1,7 @@
 ﻿using BepInEx.Logging;
 using Comfort.Common;
 using EFT;
+using EFT.Communications;
 using EFT.HealthSystem;
 using EFT.Interactive;
 using EFT.InventoryLogic;
@@ -60,37 +61,6 @@ namespace StayInTarkov.Coop.Players
         {
             CoopPlayer player = null;
 
-            //if (isClientDrone)
-            //{
-            //    player = EFT.Player.Create<CoopPlayerClient>(
-            //        ResourceBundleConstants.PLAYER_BUNDLE_NAME,
-            //        playerId,
-            //        position,
-            //        updateQueue,
-            //        EUpdateMode.Manual,
-            //        EUpdateMode.Auto,
-            //        characterControllerMode,
-            //        getSensitivity,
-            //        getAimingSensitivity,
-            //        prefix,
-            //        aiControl);
-            //}
-            //else
-            //{
-            //    player = Create<CoopPlayer>(
-            //        ResourceBundleConstants.PLAYER_BUNDLE_NAME,
-            //        playerId,
-            //        position,
-            //        updateQueue,
-            //        armsUpdateMode,
-            //        bodyUpdateMode,
-            //        characterControllerMode,
-            //        getSensitivity,
-            //        getAimingSensitivity,
-            //        prefix,
-            //        aiControl);
-            //}
-
             player = Create<CoopPlayer>(
                     ResourceBundleConstants.PLAYER_BUNDLE_NAME,
                     playerId,
@@ -139,14 +109,21 @@ namespace StayInTarkov.Coop.Players
             return player;
         }
 
+        public override void OnSkillExperienceChanged(AbstractSkill skill)
+        {
+            base.OnSkillExperienceChanged(skill);
+        }
+
         public override void OnSkillLevelChanged(AbstractSkill skill)
         {
-            //base.OnSkillLevelChanged(skill);
+            base.OnSkillLevelChanged(skill);
+            NotificationManagerClass.DisplayNotification(new AbstractNotification39(skill));
         }
 
         public override void OnWeaponMastered(MasterSkill masterSkill)
         {
-            //base.OnWeaponMastered(masterSkill);
+            base.OnWeaponMastered(masterSkill);
+            NotificationManagerClass.DisplayMessageNotification(string.Format("MasteringLevelUpMessage".Localized(null), masterSkill.MasteringGroup.Id.Localized(null), masterSkill.Level.ToString()), ENotificationDurationType.Default, ENotificationIconType.Default, null);
         }
 
         public override void ApplyDamageInfo(DamageInfo damageInfo, EBodyPart bodyPartType, float absorbed, EHeadSegment? headSegment = null)
@@ -296,6 +273,19 @@ namespace StayInTarkov.Coop.Players
         {
             // what is this
             base.Proceed<T>(item, callback, scheduled);
+        }
+
+        public override void DropCurrentController(Action callback, bool fastDrop, Item nextControllerItem = null)
+        {
+            base.DropCurrentController(callback, fastDrop, nextControllerItem);
+            CommonPlayerPacket.HasDrop = true;
+            CommonPlayerPacket.DropPacket = new()
+            {
+                FastDrop = fastDrop,
+                HasItemId = nextControllerItem != null,
+                ItemId = nextControllerItem?.Id
+            };
+            CommonPlayerPacket.ToggleSend();
         }
 
         public override void SetInventoryOpened(bool opened)
@@ -561,24 +551,10 @@ namespace StayInTarkov.Coop.Players
             {
                 StartCoroutine(SendStatePacket());
             }
-            //else if (MatchmakerAcceptPatches.IsServer) // Only run on AI when we are the server
-            //{
-            //    StartCoroutine(SendStatePacket());
-            //}
-            if (MatchmakerAcceptPatches.IsClient && !IsYourPlayer || MatchmakerAcceptPatches.IsServer && !IsAI && !IsYourPlayer) // Interpolate only if it's other clients
-            {
-                //StartCoroutine(Interpolate());
-            }
             if (MatchmakerAcceptPatches.IsClient && IsYourPlayer)
             {
                 StartCoroutine(SyncWorld());
             }
-
-            //if (!IsYourPlayer && !IsAI)
-            //{
-            //    ActiveHealthController.SetDamageCoeff(0);
-            //    StartCoroutine(SpawnPlayer());
-            //}
         }
 
         public override void UpdateTick()
@@ -620,13 +596,13 @@ namespace StayInTarkov.Coop.Players
                 if (!CoopGameComponent.TryGetCoopGameComponent(out CoopGameComponent coopGameComponent))
                 {
                     EFT.UI.ConsoleScreen.LogError("HandleCommonPacket::WorldInteractionPacket: CoopGameComponent was null!");
-                    return;
+                    goto SkipWorld;
                 }
 
                 if (!ItemFinder.TryFindItemController(packet.ProfileId, out ItemController itemController))
                 {
                     EFT.UI.ConsoleScreen.LogError("HandleCommonPacket::WorldInteractionPacket: ItemController was null!");
-                    return;
+                    goto SkipWorld;
                 }
 
                 WorldInteractiveObject worldInteractiveObject = coopGameComponent.ListOfInteractiveObjects.FirstOrDefault(x => x.Id == packet.WorldInteractionPacket.InteractiveId);
@@ -634,7 +610,7 @@ namespace StayInTarkov.Coop.Players
                 if (worldInteractiveObject == null)
                 {
                     EFT.UI.ConsoleScreen.LogError("HandleCommonPacket::WorldInteractionPacket: WorldInteractiveObject was null!");
-                    return;
+                    goto SkipWorld;
                 }
 
                 InteractionResult interactionResult = new(packet.WorldInteractionPacket.InteractionType);
@@ -684,6 +660,8 @@ namespace StayInTarkov.Coop.Players
                         keyInteractionResult == null ? null : () => keyInteractionResult.RaiseEvents(itemController, CommandStatus.Failed), this);
                 }
             }
+
+            SkipWorld:
 
             if (packet.HasContainerInteractionPacket)
             {
@@ -910,6 +888,18 @@ namespace StayInTarkov.Coop.Players
 
             if (packet.HasInventoryChanged)
                 base.SetInventoryOpened(packet.SetInventoryOpen);
+
+            if (packet.HasDrop)
+            {
+                if (ItemFinder.TryFindItem(packet.DropPacket.ItemId, out Item item))
+                {
+                    base.DropCurrentController(null, packet.DropPacket.FastDrop, item);
+                }
+                else
+                {
+                    EFT.UI.ConsoleScreen.LogError($"CommonPlayerPacket::DropPacket: Could not find ItemID {packet.DropPacket.ItemId}!");
+                }
+            }
         }
 
         protected virtual void HandleInventoryPacket()
