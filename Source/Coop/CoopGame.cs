@@ -16,6 +16,7 @@ using StayInTarkov.Coop.FreeCamera;
 using StayInTarkov.Coop.Matchmaker;
 using StayInTarkov.Coop.Players;
 using StayInTarkov.Networking;
+using StayInTarkov.Networking.Packets;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -469,36 +470,66 @@ namespace StayInTarkov.Coop
 
                 if (coopGameComponent != null)
                 {
-                    while (coopGameComponent.PlayerUsers == null)
-                    {
+                    while (coopGameComponent.MyPlayer == null)
                         await Task.Delay(1000);
+
+                    if (MatchmakerAcceptPatches.IsServer)
+                    {
+                        while (coopGameComponent.MyPlayer.Server == null)
+                            await Task.Delay(1000);
+
+                        if (coopGameComponent.MyPlayer != null && coopGameComponent.MyPlayer.Server != null)
+                        {
+                            var numbersOfPlayersToWaitFor = MatchmakerAcceptPatches.HostExpectedNumberOfPlayers - (coopGameComponent.MyPlayer.Server.NetServer.ConnectedPeersCount + 1);
+                            do
+                            {
+                                var progress = (coopGameComponent.MyPlayer.Server.NetServer.ConnectedPeersCount + 1) / MatchmakerAcceptPatches.HostExpectedNumberOfPlayers;
+                                numbersOfPlayersToWaitFor = MatchmakerAcceptPatches.HostExpectedNumberOfPlayers - (coopGameComponent.MyPlayer.Server.NetServer.ConnectedPeersCount + 1);
+                                if (MatchmakerAcceptPatches.TimeHasComeScreenController != null)
+                                {
+                                    if (numbersOfPlayersToWaitFor > 0)
+                                    {
+                                        MatchmakerAcceptPatches.TimeHasComeScreenController.ChangeStatus($"Waiting for {numbersOfPlayersToWaitFor} Player(s)", progress);
+                                    }
+                                    else
+                                    {
+                                        MatchmakerAcceptPatches.TimeHasComeScreenController.ChangeStatus($"All players joined, starting game...", null);
+                                    }
+                                }
+                                await Task.Delay(1000);
+                            } while (numbersOfPlayersToWaitFor > 0);
+                        } 
                     }
-
-                    var numbersOfPlayersToWaitFor = MatchmakerAcceptPatches.HostExpectedNumberOfPlayers - coopGameComponent.PlayerUsers.Count();
-                    do
+                    else if (MatchmakerAcceptPatches.IsClient)
                     {
-                        if (coopGameComponent.PlayerUsers == null)
-                        {
+                        while (coopGameComponent.MyPlayer.Client == null)
                             await Task.Delay(1000);
-                            continue;
-                        }
 
-                        if (coopGameComponent.PlayerUsers.Count() == 0)
+                        if (coopGameComponent.MyPlayer != null && coopGameComponent.MyPlayer.Client != null)
                         {
-                            await Task.Delay(1000);
-                            continue;
+                            InformationPacket packet = new(true);
+                            coopGameComponent.MyPlayer.Client.SendData(coopGameComponent.MyPlayer.Writer, ref packet, LiteNetLib.DeliveryMethod.ReliableUnordered);
+                            var numbersOfPlayersToWaitFor = MatchmakerAcceptPatches.HostExpectedNumberOfPlayers - (coopGameComponent.MyPlayer.Client.ConnectedClients + 1);
+                            do
+                            {
+                                var progress = (coopGameComponent.MyPlayer.Client.ConnectedClients + 1) / MatchmakerAcceptPatches.HostExpectedNumberOfPlayers;
+                                numbersOfPlayersToWaitFor = MatchmakerAcceptPatches.HostExpectedNumberOfPlayers - (coopGameComponent.MyPlayer.Client.ConnectedClients + 1);
+                                if (MatchmakerAcceptPatches.TimeHasComeScreenController != null)
+                                {
+                                    if (numbersOfPlayersToWaitFor > 0)
+                                    {
+                                        MatchmakerAcceptPatches.TimeHasComeScreenController.ChangeStatus($"Waiting for {numbersOfPlayersToWaitFor} Player(s)", progress);
+                                    }
+                                    else
+                                    {
+                                        MatchmakerAcceptPatches.TimeHasComeScreenController.ChangeStatus($"All players joined, starting game.", null);
+                                    }
+                                }
+                                coopGameComponent.MyPlayer.Client.SendData(coopGameComponent.MyPlayer.Writer, ref packet, LiteNetLib.DeliveryMethod.ReliableUnordered);
+                                await Task.Delay(1000);
+                            } while (numbersOfPlayersToWaitFor > 0);
                         }
-
-                        var progress = (coopGameComponent.PlayerUsers.Count() / MatchmakerAcceptPatches.HostExpectedNumberOfPlayers);
-                        numbersOfPlayersToWaitFor = MatchmakerAcceptPatches.HostExpectedNumberOfPlayers - coopGameComponent.PlayerUsers.Count();
-                        if (MatchmakerAcceptPatches.TimeHasComeScreenController != null)
-                        {
-                            MatchmakerAcceptPatches.TimeHasComeScreenController.ChangeStatus($"Waiting for {numbersOfPlayersToWaitFor} Player(s)", progress);
-                        }
-
-                        await Task.Delay(1000);
-
-                    } while (numbersOfPlayersToWaitFor > 0);
+                    }
                 }
             });
 

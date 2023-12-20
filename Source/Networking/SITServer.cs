@@ -29,8 +29,15 @@ namespace StayInTarkov.Networking
         private NetDataWriter _dataWriter = new();
         public CoopPlayer MyPlayer => Singleton<GameWorld>.Instance.MainPlayer as CoopPlayer;
         public ConcurrentDictionary<string, CoopPlayer> Players => CoopGameComponent.Players;
-        public List<string> PlayersMissing = new();
+        public List<string> PlayersMissing = [];
         private CoopGameComponent CoopGameComponent { get; set; }
+        public LiteNetLib.NetManager NetServer
+        {
+            get
+            {
+                return _netServer;
+            }
+        }
 
         public void Start()
         {
@@ -48,6 +55,7 @@ namespace StayInTarkov.Networking
             _packetProcessor.SubscribeNetSerializable<InventoryPacket, NetPeer>(OnInventoryPacketReceived);
             _packetProcessor.SubscribeNetSerializable<CommonPlayerPacket, NetPeer>(OnCommonPlayerPacketReceived);
             _packetProcessor.SubscribeNetSerializable<AllCharacterRequestPacket, NetPeer>(OnAllCharacterRequestPacketReceived);
+            _packetProcessor.SubscribeNetSerializable<InformationPacket, NetPeer>(OnInformationPacketReceived);
 
             _netServer = new LiteNetLib.NetManager(this)
             {
@@ -62,6 +70,17 @@ namespace StayInTarkov.Networking
             EFT.UI.ConsoleScreen.Log("Started SITServer");
             NotificationManagerClass.DisplayMessageNotification($"Server started on port {_netServer.LocalPort}.",
                 EFT.Communications.ENotificationDurationType.Default, EFT.Communications.ENotificationIconType.EntryPoint);
+        }
+
+        private void OnInformationPacketReceived(InformationPacket packet, NetPeer peer)
+        {
+            InformationPacket respondPackage = new(false)
+            {
+                NumberOfPlayers = _netServer.ConnectedPeersCount
+            };
+
+            _dataWriter.Reset();
+            SendDataToPeer(peer, _dataWriter, ref respondPackage, DeliveryMethod.ReliableUnordered);
         }
 
         private void OnAllCharacterRequestPacketReceived(AllCharacterRequestPacket packet, NetPeer peer)
@@ -84,7 +103,8 @@ namespace StayInTarkov.Networking
                         {
                             Profile = player.Profile
                         },
-                        IsAlive = player.ActiveHealthController.IsAlive
+                        IsAlive = player.ActiveHealthController.IsAlive,
+                        Position = player.Transform.position
                     };
                     _dataWriter.Reset();
                     SendDataToPeer(peer, _dataWriter, ref requestPacket, DeliveryMethod.ReliableOrdered);
@@ -96,9 +116,9 @@ namespace StayInTarkov.Networking
                 EFT.UI.ConsoleScreen.Log($"Requesting missing player from server.");
                 AllCharacterRequestPacket requestPacket = new(MyPlayer.ProfileId);
                 _dataWriter.Reset();
-                SendDataToPeer(peer, _dataWriter, ref requestPacket, DeliveryMethod.ReliableOrdered);                
+                SendDataToPeer(peer, _dataWriter, ref requestPacket, DeliveryMethod.ReliableOrdered);
             }
-            else if (!packet.IsRequest && PlayersMissing.Contains(packet.ProfileId))
+            if (!packet.IsRequest && PlayersMissing.Contains(packet.ProfileId))
             {
                 EFT.UI.ConsoleScreen.Log($"Received CharacterRequest from client: ProfileID: {packet.PlayerInfo.Profile.ProfileId}, Nickname: {packet.PlayerInfo.Profile.Nickname}");
                 if (packet.ProfileId != MyPlayer.ProfileId)
@@ -108,12 +128,11 @@ namespace StayInTarkov.Networking
                     if (!CoopGameComponent.PlayersToSpawnProfiles.ContainsKey(packet.PlayerInfo.Profile.ProfileId))
                         CoopGameComponent.PlayersToSpawnProfiles.Add(packet.PlayerInfo.Profile.ProfileId, packet.PlayerInfo.Profile);
 
-                    CoopGameComponent.TestCreateObserved(packet.PlayerInfo.Profile, new Vector3(0, 100, 0), packet.IsAlive);
+                    CoopGameComponent.TestCreateObserved(packet.PlayerInfo.Profile, new Vector3(packet.Position.x, packet.Position.y + 0.5f, packet.Position.y), packet.IsAlive);
                     PlayersMissing.Remove(packet.ProfileId);
                 }
             }
         }
-
         private void OnCommonPlayerPacketReceived(CommonPlayerPacket packet, NetPeer peer)
         {
             if (!Players.ContainsKey(packet.ProfileId))

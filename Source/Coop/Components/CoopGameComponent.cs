@@ -520,7 +520,7 @@ namespace StayInTarkov.Coop
                 }
                 return;
             }
-            else if (Input.GetKeyDown(KeyCode.F8) && Input.GetKeyDown(KeyCode.LeftShift) && quitState != EQuitState.NONE && !RequestQuitGame) // Force quit
+            else if (Input.GetKeyDown(KeyCode.F8) && Input.GetKeyDown(KeyCode.LeftShift)) // Force quit
             {
                 RequestQuitGame = true;
 
@@ -646,108 +646,7 @@ namespace StayInTarkov.Coop
             {
                 requestPacket.Characters[i] = Players.ElementAt(i).Key;
             }
-            myPlayer.Client.SendData(myPlayer.Writer, ref requestPacket, LiteNetLib.DeliveryMethod.ReliableOrdered);
-
-            //Dictionary<string, object> d = new();
-            //d.Add("serverId", GetServerId());
-            //d.Add("pL", new List<string>());
-
-            //// -----------------------------------------------------------------------------------------------------------
-            //// We must filter out characters that already exist on this match!
-            ////
-            //var playerList = new List<string>();
-            //if (!PluginConfigSettings.Instance.CoopSettings.SETTING_DEBUGSpawnDronesOnServer)
-            //{
-            //    if (PlayersToSpawn.Count > 0)
-            //        playerList.AddRange(PlayersToSpawn.Keys.ToArray());
-            //    if (Players.Keys.Any())
-            //        playerList.AddRange(Players.Keys.ToArray());
-            //    if (Singleton<GameWorld>.Instance.RegisteredPlayers.Any())
-            //        playerList.AddRange(Singleton<GameWorld>.Instance.RegisteredPlayers.Select(x => x.ProfileId));
-            //    if (Singleton<GameWorld>.Instance.AllAlivePlayersList.Count > 0)
-            //        playerList.AddRange(Singleton<GameWorld>.Instance.AllAlivePlayersList.Select(x => x.ProfileId));
-            //}
-            ////
-            //// -----------------------------------------------------------------------------------------------------------
-            //// Ensure this is a distinct list of Ids
-            //d["pL"] = playerList.Distinct();
-            //var jsonDataToSend = d.ToJson();
-
-            //try
-            //{
-            //    m_CharactersJson = await RequestingObj.PostJsonAsync<Dictionary<string, object>[]>("/coop/server/read/players", jsonDataToSend, 30000);
-            //    if (m_CharactersJson == null)
-            //        return;
-
-            //    if (!m_CharactersJson.Any())
-            //        return;
-
-            //    if (m_CharactersJson[0].ContainsKey("notFound"))
-            //    {
-            //        // Game is broken and doesn't exist!
-            //        if (LocalGameInstance != null)
-            //        {
-            //            ServerHasStopped = true;
-            //        }
-            //        return;
-            //    }
-
-            //    //Logger.LogDebug($"CoopGameComponent.ReadFromServerCharacters:{actionsToValues.Length}");
-
-            //    var packets = m_CharactersJson
-            //         .Where(x => x != null);
-            //    if (packets == null)
-            //        return;
-
-            //    foreach (var queuedPacket in packets)
-            //    {
-            //        if (queuedPacket != null && queuedPacket.Count > 0)
-            //        {
-            //            if (queuedPacket != null)
-            //            {
-            //                if (queuedPacket.ContainsKey("m"))
-            //                {
-            //                    var method = queuedPacket["m"].ToString();
-            //                    if (method != "PlayerSpawn")
-            //                        continue;
-
-            //                    string profileId = queuedPacket["profileId"].ToString();
-            //                    if (!PluginConfigSettings.Instance.CoopSettings.SETTING_DEBUGSpawnDronesOnServer)
-            //                    {
-            //                        if (Players == null
-            //                            || Players.ContainsKey(profileId)
-            //                            || Singleton<GameWorld>.Instance.RegisteredPlayers.Any(x => x.ProfileId == profileId)
-            //                            )
-            //                        {
-            //                            Logger.LogDebug($"Ignoring call to Spawn player {profileId}. The player already exists in the game.");
-            //                            continue;
-            //                        }
-            //                    }
-
-            //                    if (PlayersToSpawn.ContainsKey(profileId))
-            //                        continue;
-
-            //                    if (!PlayersToSpawnPacket.ContainsKey(profileId))
-            //                        PlayersToSpawnPacket.TryAdd(profileId, queuedPacket);
-
-            //                    if (!PlayersToSpawn.ContainsKey(profileId))
-            //                        PlayersToSpawn.TryAdd(profileId, ESpawnState.None);
-
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
-            //catch (Exception ex)
-            //{
-
-            //    Logger.LogError(ex.ToString());
-
-            //}
-            //finally
-            //{
-
-            //}
+            myPlayer.Client.SendData(myPlayer.Writer, ref requestPacket, LiteNetLib.DeliveryMethod.ReliableOrdered);            
         }
 
         private IEnumerator ProcessServerCharacters()

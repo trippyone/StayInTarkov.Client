@@ -109,23 +109,6 @@ namespace StayInTarkov.Coop.Players
             return player;
         }
 
-        public override void OnSkillExperienceChanged(AbstractSkill skill)
-        {
-            base.OnSkillExperienceChanged(skill);
-        }
-
-        public override void OnSkillLevelChanged(AbstractSkill skill)
-        {
-            base.OnSkillLevelChanged(skill);
-            NotificationManagerClass.DisplayNotification(new AbstractNotification39(skill));
-        }
-
-        public override void OnWeaponMastered(MasterSkill masterSkill)
-        {
-            base.OnWeaponMastered(masterSkill);
-            NotificationManagerClass.DisplayMessageNotification(string.Format("MasteringLevelUpMessage".Localized(null), masterSkill.MasteringGroup.Id.Localized(null), masterSkill.Level.ToString()), ENotificationDurationType.Default, ENotificationIconType.Default, null);
-        }
-
         public override void ApplyDamageInfo(DamageInfo damageInfo, EBodyPart bodyPartType, float absorbed, EHeadSegment? headSegment = null)
         {
             HealthPacket.HasDamageInfo = true;
@@ -581,17 +564,15 @@ namespace StayInTarkov.Coop.Players
         protected virtual void HandleCommonPacket()
         {
             var packet = CommonPlayerPackets.Dequeue();
-            EFT.UI.ConsoleScreen.Log("I received a CommonPlayerPacket!");
 
             if (packet.Phrase != EPhraseTrigger.PhraseNone)
             {
-                EFT.UI.ConsoleScreen.Log("I received a CommonPlayerPacket Phrase!");
                 ReceiveSay(packet.Phrase, packet.PhraseIndex);
             }
 
             if (packet.HasWorldInteractionPacket)
             {
-                EFT.UI.ConsoleScreen.Log($"I received a CommonPlayerPacket WorldInteractionpacket! InteractiveId: {packet.WorldInteractionPacket.InteractiveId}");
+                // TODO: Fix performance on the checker
 
                 if (!CoopGameComponent.TryGetCoopGameComponent(out CoopGameComponent coopGameComponent))
                 {
@@ -665,7 +646,6 @@ namespace StayInTarkov.Coop.Players
 
             if (packet.HasContainerInteractionPacket)
             {
-                EFT.UI.ConsoleScreen.Log($"I received a CommonPlayerPacket ContainerInteractionPacket! InteractiveId: {packet.ContainerInteractionPacket.InteractiveId}");
                 CoopGameComponent coopGameComponent = CoopGameComponent.GetCoopGameComponent();
                 LootableContainer lootableContainer = coopGameComponent.ListOfInteractiveObjects.FirstOrDefault(x => x.Id == packet.ContainerInteractionPacket.InteractiveId) as LootableContainer;
 
@@ -904,7 +884,6 @@ namespace StayInTarkov.Coop.Players
 
         protected virtual void HandleInventoryPacket()
         {
-            EFT.UI.ConsoleScreen.Log("I received a InventoryPacket");
             var packet = InventoryPackets.Dequeue();
 
             // TODO: Sometimes host drops items that AI dropped?
@@ -928,7 +907,6 @@ namespace StayInTarkov.Coop.Players
                         if (result.Succeeded)
                         {
                             ItemController_Execute_Patch.RunLocally = false;
-                            EFT.UI.ConsoleScreen.Log("ItemControllerExecutePacket: Executing operation " + result.Value.Id);
                             inventory.Execute(result.Value, null);
                         }
                     }
@@ -1268,12 +1246,10 @@ namespace StayInTarkov.Coop.Players
 
         protected virtual void HandleHealthPacket()
         {
-            EFT.UI.ConsoleScreen.Log("I received a HealthPacket");
             var packet = HealthPackets.Dequeue();
 
             if (packet.HasDamageInfo) // Currently damage is being handled by the server, so we run this one on ourselves too
             {
-                EFT.UI.ConsoleScreen.Log("I received a DamageInfoPacket");
                 DamageInfo damageInfo = new()
                 {
                     Damage = packet.ApplyDamageInfo.Damage,
@@ -1284,13 +1260,11 @@ namespace StayInTarkov.Coop.Players
 
             if (packet.HasBodyPartRestoreInfo)
             {
-                EFT.UI.ConsoleScreen.Log("I received a RestoreBodyPartPacket");
                 ActiveHealthController.RestoreBodyPart(packet.RestoreBodyPartPacket.BodyPartType, packet.RestoreBodyPartPacket.HealthPenalty);
             }
 
             if (packet.HasChangeHealthPacket)
             {
-                EFT.UI.ConsoleScreen.Log("I received a ChangeHealthPacket");
                 DamageInfo dInfo = new()
                 {
                     DamageType = EDamageType.Medicine
@@ -1300,19 +1274,16 @@ namespace StayInTarkov.Coop.Players
 
             if (packet.HasEnergyChange)
             {
-                EFT.UI.ConsoleScreen.Log("I received a EnergyChangePacket");
                 ActiveHealthController.ChangeEnergy(packet.EnergyChangeValue);
             }
 
             if (packet.HasHydrationChange)
             {
-                EFT.UI.ConsoleScreen.Log("I received a HydrationChangePacket");
                 ActiveHealthController.ChangeHydration(packet.HydrationChangeValue);
             }
 
             if (packet.HasAddEffect)
             {
-                EFT.UI.ConsoleScreen.Log("I received an AddEffectPacket");
                 var coopHealthController = ActiveHealthController as CoopHealthController;
                 coopHealthController.AddNetworkEffect(packet.AddEffectPacket.Type, packet.AddEffectPacket.BodyPartType, packet.AddEffectPacket.DelayTime,
                     packet.AddEffectPacket.WorkTime, packet.AddEffectPacket.ResidueTime, packet.AddEffectPacket.Strength);
@@ -1325,16 +1296,12 @@ namespace StayInTarkov.Coop.Players
                 if (packet.RemoveEffectPacket.Type == "MedEffect")
                     return;
 
-                EFT.UI.ConsoleScreen.Log($"I received a RemoveEffectPacket: {packet.RemoveEffectPacket.Id} + {packet.RemoveEffectPacket.Type} + {packet.RemoveEffectPacket.BodyPartType}");
-
                 var effects = ActiveHealthController.GetAllEffects(packet.RemoveEffectPacket.BodyPartType);
                 var toRemove = effects.Where(x => x.GetType().Name == packet.RemoveEffectPacket.Type).FirstOrDefault();
                 if (toRemove != default)
                 {
-                    EFT.UI.ConsoleScreen.Log($"RemoveEffectPacket: toRemove was {toRemove}");
                     if (toRemove is ActiveHealthController.AbstractEffect effect)
                     {
-                        EFT.UI.ConsoleScreen.Log($"RemoveEffectPacket: Removing {effect}");
                         effect.ForceRemove();
                     }
                     else
@@ -1350,7 +1317,6 @@ namespace StayInTarkov.Coop.Players
 
             if (packet.HasObservedDeathPacket)
             {
-                EFT.UI.ConsoleScreen.Log("I received a ObservedDeathPacket");
                 ActiveHealthController.Kill(packet.ObservedDeathPacket.DamageType);
                 if (HandsController is FirearmController firearmCont)
                 {

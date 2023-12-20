@@ -5,20 +5,16 @@ using Comfort.Common;
 using DrakiaXYZ.BigBrain.Brains;
 using EFT;
 using StayInTarkov;
-using StayInTarkov.AI.PMCLogic.Roaming;
 using StayInTarkov.AI.PMCLogic.RushAirdrop;
 using StayInTarkov.AkiSupport.Airdrops;
 using StayInTarkov.AkiSupport.Airdrops.Models;
 using StayInTarkov.AkiSupport.Airdrops.Utils;
 using StayInTarkov.Coop;
 using StayInTarkov.Coop.Matchmaker;
-using StayInTarkov.Coop.NetworkPacket;
-using StayInTarkov.Coop.Web;
 using StayInTarkov.Networking;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static GClass1657;
 
 namespace Aki.Custom.Airdrops
 {
@@ -239,7 +235,7 @@ namespace Aki.Custom.Airdrops
 
             if (lootData == null)
                 throw new System.Exception("Airdrops. Tried to BuildLootContainer without any Loot.");
-            
+
             factory.BuildContainer(AirdropBox.Container, config, lootData.DropType);
             factory.AddLoot(AirdropBox.Container, lootData);
             ClientLootBuilt = true;

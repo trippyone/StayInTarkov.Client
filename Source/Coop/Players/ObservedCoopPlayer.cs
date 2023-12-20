@@ -25,7 +25,7 @@ namespace StayInTarkov.Coop.Players
     {
         public CoopPlayer MainPlayer => Singleton<GameWorld>.Instance.MainPlayer as CoopPlayer;
         private float InterpolationRatio { get; set; } = 0.5f;
-        private bool IsObservedAi = true;
+        private bool IsObservedAI = true;
 
         public static async Task<LocalPlayer> CreateObservedPlayer(
             int playerId,
@@ -117,7 +117,7 @@ namespace StayInTarkov.Coop.Players
             if (damageInfo.Player.iPlayer.Profile != MainPlayer.Profile)
                 return;
 
-            if (!IsObservedAi)
+            if (!IsObservedAI)
                 return;
 
             if (damageInfo.DamageType == EDamageType.Fall)
@@ -144,7 +144,7 @@ namespace StayInTarkov.Coop.Players
         public override Corpse CreateCorpse()
         {
             StopCoroutine(SendStatePacket());
-            return CreateCorpse<Corpse>(MovementContext.Velocity);
+            return base.CreateCorpse();
         }
 
         protected override void Interpolate()
@@ -273,7 +273,7 @@ namespace StayInTarkov.Coop.Players
             Writer = new();
 
             if (ProfileId.StartsWith("pmc"))
-                IsObservedAi = false;
+                IsObservedAI = false;
 
             WeaponPacket = new(ProfileId);
             HealthPacket = new(ProfileId);
@@ -290,18 +290,12 @@ namespace StayInTarkov.Coop.Players
                 MovementContext.MovementDirection, CurrentManagedState.Name, MovementContext.Tilt,
                 MovementContext.Step, CurrentAnimatorStateIndex, MovementContext.SmoothedCharacterMovementSpeed,
                 IsInPronePose, PoseLevel, MovementContext.IsSprintEnabled, Physical.SerializationStruct, InputDirection,
-                MovementContext.BlindFire, MovementContext.ActualLinearSpeed);
-
-            if (!IsYourPlayer && !IsAI)
-            {
-                //ActiveHealthController.SetDamageCoeff(0);
-                //StartCoroutine(SpawnPlayer());
-            }
+                MovementContext.BlindFire, MovementContext.ActualLinearSpeed);            
 
             if (MatchmakerAcceptPatches.IsClient)
                 StartCoroutine(SendStatePacket());
 
-            if (!ProfileId.StartsWith("pmc")) // Prevents AI from dying to fall damage
+            if (IsObservedAI) // Prevents AI from dying to fall damage
             {
                 ActiveHealthController.SetDamageCoeff(0);
                 StartCoroutine(SpawnObservedBot()); 

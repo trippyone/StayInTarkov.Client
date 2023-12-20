@@ -1,4 +1,5 @@
 ﻿using LiteNetLib.Utils;
+using UnityEngine;
 using static StayInTarkov.Networking.SITSerialization;
 
 namespace StayInTarkov.Networking.Packets
@@ -11,6 +12,7 @@ namespace StayInTarkov.Networking.Packets
         public string[] Characters { get; set; }
         public PlayerInfoPacket PlayerInfo { get; set; }
         public bool IsAlive { get; set; } = true;
+        public Vector3 Position { get; set; }
 
         public AllCharacterRequestPacket(string profileId)
         {
@@ -35,6 +37,7 @@ namespace StayInTarkov.Networking.Packets
                 PlayerInfo = PlayerInfoPacket.Deserialize(reader);
             }
             IsAlive = reader.GetBool();
+            Position = Vector3Utils.Deserialize(reader);
         }
 
         public void Serialize(NetDataWriter writer)
@@ -54,6 +57,7 @@ namespace StayInTarkov.Networking.Packets
                 PlayerInfoPacket.Serialize(writer, PlayerInfo);
             }
             writer.Put(IsAlive);
+            Vector3Utils.Serialize(writer, Position);
         }
     }
 }

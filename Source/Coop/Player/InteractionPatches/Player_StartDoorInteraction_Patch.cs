@@ -156,7 +156,6 @@ namespace StayInTarkov.Coop.Player.InteractionPatches
                     InteractionType = interactionResult.InteractionType
                 };
             }
-            EFT.UI.ConsoleScreen.Log($"Sending WorldInteractionPacket on {interactive.Id}");
             player.CommonPlayerPacket.ToggleSend();
 
             //EFT.Player player = GetPlayerByMovementState(__instance);

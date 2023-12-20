@@ -1,4 +1,5 @@
-﻿using EFT;
+﻿using Comfort.Common;
+using EFT;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using Sirenix.Serialization;
@@ -31,6 +32,7 @@ namespace StayInTarkov.Networking
         private CoopGameComponent CoopGameComponent { get; set; }
         public NetPacketProcessor _packetProcessor = new();
         public int Ping = 0;
+        public int ConnectedClients = 0;
 
         public void Start()
         {
@@ -46,6 +48,7 @@ namespace StayInTarkov.Networking
             _packetProcessor.SubscribeNetSerializable<InventoryPacket, NetPeer>(OnInventoryPacketReceived);
             _packetProcessor.SubscribeNetSerializable<CommonPlayerPacket, NetPeer>(OnCommonPlayerPacketReceived);
             _packetProcessor.SubscribeNetSerializable<AllCharacterRequestPacket, NetPeer>(OnAllCharacterRequestPacketReceived);
+            _packetProcessor.SubscribeNetSerializable<InformationPacket, NetPeer>(OnInformationPacketReceived);
 
             _netClient = new LiteNetLib.NetManager(this)
             {
@@ -60,6 +63,12 @@ namespace StayInTarkov.Networking
             _netClient.Connect(PluginConfigSettings.Instance.CoopSettings.SITGamePlayIP, PluginConfigSettings.Instance.CoopSettings.SITGamePlayPort, "sit.core");
         }
 
+        private void OnInformationPacketReceived(InformationPacket packet, NetPeer peer)
+        {
+            if (!packet.IsRequest)
+                ConnectedClients = packet.NumberOfPlayers;
+        }
+
         private void OnAllCharacterRequestPacketReceived(AllCharacterRequestPacket packet, NetPeer peer)
         {
             if (!packet.IsRequest)
@@ -72,7 +81,7 @@ namespace StayInTarkov.Networking
                     if (!CoopGameComponent.PlayersToSpawnProfiles.ContainsKey(packet.PlayerInfo.Profile.ProfileId))
                         CoopGameComponent.PlayersToSpawnProfiles.Add(packet.PlayerInfo.Profile.ProfileId, packet.PlayerInfo.Profile);
 
-                    CoopGameComponent.TestCreateObserved(packet.PlayerInfo.Profile, new Vector3(0, 100, 0), packet.IsAlive);
+                    CoopGameComponent.TestCreateObserved(packet.PlayerInfo.Profile, new Vector3(packet.Position.x, packet.Position.y + 0.5f, packet.Position.y), packet.IsAlive);
                 }
             }
             else if (packet.IsRequest)
@@ -85,7 +94,8 @@ namespace StayInTarkov.Networking
                     {
                         Profile = MyPlayer.Profile
                     },
-                    IsAlive = MyPlayer.ActiveHealthController.IsAlive
+                    IsAlive = MyPlayer.ActiveHealthController.IsAlive,
+                    Position = MyPlayer.Transform.position
                 };
                 _dataWriter.Reset();
                 SendData(_dataWriter, ref requestPacket, DeliveryMethod.ReliableOrdered);

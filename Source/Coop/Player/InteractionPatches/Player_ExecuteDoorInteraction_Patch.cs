@@ -94,7 +94,6 @@ namespace StayInTarkov.Coop.Player.InteractionPatches
                     };
                 }
                 botPlayer.CommonPlayerPacket.ToggleSend();
-                EFT.UI.ConsoleScreen.Log($"Sending WorldInteractionPacket on {interactive.Id}");
                 return;
             }
 
@@ -151,7 +150,6 @@ namespace StayInTarkov.Coop.Player.InteractionPatches
                     InteractionType = interactionResult.InteractionType
                 };
             }
-            EFT.UI.ConsoleScreen.Log($"Sending WorldInteractionPacket on {interactive.Id}");
             player.CommonPlayerPacket.ToggleSend();
 
             //if (CallLocally.Contains(user.ProfileId))
