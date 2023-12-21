@@ -76,8 +76,8 @@ namespace StayInTarkov.Networking
 
         WebSocketSharp.WebSocket WebSocket { get; set; }
 
-        public static int PING_LIMIT_HIGH { get; } = 125;
-        public static int PING_LIMIT_MID { get; } = 100;
+        public static int PING_LIMIT_HIGH { get; } = 100;
+        public static int PING_LIMIT_MID { get; } = 50;
 
 
         protected AkiBackendCommunication(ManualLogSource logger = null)

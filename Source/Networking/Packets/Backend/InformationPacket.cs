@@ -2,7 +2,7 @@
 
 namespace StayInTarkov.Networking.Packets
 {
-    internal struct InformationPacket(bool isRequest) : INetSerializable
+    public struct InformationPacket(bool isRequest) : INetSerializable
     {
         public bool IsRequest { get; set; } = isRequest;
         public int NumberOfPlayers { get; set; } = 0;

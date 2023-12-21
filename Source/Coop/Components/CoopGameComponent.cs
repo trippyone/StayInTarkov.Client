@@ -499,9 +499,9 @@ namespace StayInTarkov.Coop
                 if (MatchmakerAcceptPatches.IsServer)
                 {
                     // A host needs to wait for the team to extract or die!
-                    if ((PlayerUsers.Count() > 1) && (quitState == EQuitState.YouAreDeadAsHost || quitState == EQuitState.YouHaveExtractedOnlyAsHost))
+                    if ((MyPlayer.Server.NetServer.ConnectedPeersCount > 0) && (quitState == EQuitState.YouAreDeadAsHost || quitState == EQuitState.YouHaveExtractedOnlyAsHost))
                     {
-                        NotificationManagerClass.DisplayWarningNotification("HOSTING: You cannot exit the game until all clients have escaped or dead");
+                        NotificationManagerClass.DisplayWarningNotification("HOSTING: You cannot exit the game until all clients have extracted or died.");
                         RequestQuitGame = false;
                         return;
                     }
@@ -511,25 +511,6 @@ namespace StayInTarkov.Coop
                             Singleton<ISITGame>.Instance.MyExitStatus,
                             Singleton<ISITGame>.Instance.MyExitLocation, 0);
                     }
-                }
-                else
-                {
-                    Singleton<ISITGame>.Instance.Stop(Singleton<GameWorld>.Instance.MainPlayer.ProfileId,
-                        Singleton<ISITGame>.Instance.MyExitStatus,
-                        Singleton<ISITGame>.Instance.MyExitLocation, 0);
-                }
-                return;
-            }
-            else if (Input.GetKeyDown(KeyCode.F8) && Input.GetKeyDown(KeyCode.LeftShift)) // Force quit
-            {
-                RequestQuitGame = true;
-
-                // If you are the server / host
-                if (MatchmakerAcceptPatches.IsServer)
-                {
-                    Singleton<ISITGame>.Instance.Stop(Singleton<GameWorld>.Instance.MainPlayer.ProfileId,
-                            Singleton<ISITGame>.Instance.MyExitStatus,
-                            Singleton<ISITGame>.Instance.MyExitLocation, 0);
                 }
                 else
                 {
@@ -689,93 +670,10 @@ namespace StayInTarkov.Coop
 
                     if (PlayersToSpawn[p.Key] == ESpawnState.Spawned)
                         continue;
-
-                    //Vector3 newPosition = Vector3.zero;
-                    //if (PlayersToSpawnPacket[p.Key].ContainsKey("sPx")
-                    //    && PlayersToSpawnPacket[p.Key].ContainsKey("sPy")
-                    //    && PlayersToSpawnPacket[p.Key].ContainsKey("sPz"))
-                    //{
-                    //    string npxString = PlayersToSpawnPacket[p.Key]["sPx"].ToString();
-                    //    newPosition.x = float.Parse(npxString);
-                    //    string npyString = PlayersToSpawnPacket[p.Key]["sPy"].ToString();
-                    //    newPosition.y = float.Parse(npyString);
-                    //    string npzString = PlayersToSpawnPacket[p.Key]["sPz"].ToString();
-                    //    newPosition.z = float.Parse(npzString) + 0.5f;
-                    //    ProcessPlayerBotSpawn(PlayersToSpawnPacket[p.Key], p.Key, newPosition, false);
-                    //}
-                    //else
-                    //{
-                    //    Logger.LogError($"ReadFromServerCharacters::PlayersToSpawnPacket does not have positional data for {p.Key}");
-                    //}
                 }
 
 
                 yield return waitEndOfFrame;
-            }
-        }
-
-        private void ProcessPlayerBotSpawn(Dictionary<string, object> packet, string profileId, Vector3 newPosition, bool isBot)
-        {
-            // If not showing drones. Check whether the "Player" has been registered, if they have, then ignore the drone
-            if (!PluginConfigSettings.Instance.CoopSettings.SETTING_DEBUGSpawnDronesOnServer)
-            {
-                if (Singleton<GameWorld>.Instance.RegisteredPlayers.Any(x => x.ProfileId == profileId))
-                {
-                    if (PlayersToSpawn.ContainsKey(profileId))
-                        PlayersToSpawn[profileId] = ESpawnState.Ignore;
-
-                    return;
-                }
-
-                if (Players.Keys.Any(x => x == profileId))
-                {
-                    if (PlayersToSpawn.ContainsKey(profileId))
-                        PlayersToSpawn[profileId] = ESpawnState.Ignore;
-
-                    return;
-                }
-            }
-
-
-            // If CreatePhysicalOtherPlayerOrBot has been done before. Then ignore the Deserialization section and continue.
-            if (PlayersToSpawn.ContainsKey(profileId)
-                && PlayersToSpawnProfiles.ContainsKey(profileId)
-                && PlayersToSpawnProfiles[profileId] != null
-                )
-            {
-                var isDead = false;
-                if (packet.ContainsKey("isDead"))
-                {
-                    Logger.LogDebug($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss.fff")}: Packet for {profileId} contains DEATH message, registered handling of this on spawn");
-                    isDead = bool.Parse(packet["isDead"].ToString());
-                }
-                CreatePhysicalOtherPlayerOrBot(PlayersToSpawnProfiles[profileId], newPosition, isDead);
-                return;
-            }
-
-            if (PlayersToSpawnProfiles.ContainsKey(profileId))
-                return;
-
-            PlayersToSpawnProfiles.Add(profileId, null);
-
-            Logger.LogDebug($"ProcessPlayerBotSpawn:{profileId}");
-
-            Profile profile = new();
-            if (packet.ContainsKey("profileJson"))
-            {
-                if (packet["profileJson"].ToString().TrySITParseJson(out profile))
-                {
-                    //Logger.LogInfo("Obtained Profile");
-                    profile.Skills.StartClientMode();
-                    // Send to be loaded
-                    PlayersToSpawnProfiles[profileId] = profile;
-                }
-                else
-                {
-                    Logger.LogError("Unable to Parse Profile");
-                    PlayersToSpawn[profileId] = ESpawnState.Error;
-                    return;
-                }
             }
         }
 
@@ -1138,91 +1036,6 @@ namespace StayInTarkov.Coop
             });
         }
 
-        private void CreatePlayerStatePacketFromPRC(ref List<Dictionary<string, object>> playerStates, EFT.Player player, PlayerReplicatedComponent prc)
-        {
-            Dictionary<string, object> dictPlayerState = new();
-
-            // --- The important Ids
-            dictPlayerState.Add("profileId", player.ProfileId);
-            dictPlayerState.Add("serverId", GetServerId());
-
-            // --- Positional 
-            dictPlayerState.Add("pX", player.Position.x);
-            dictPlayerState.Add("pY", player.Position.y);
-            dictPlayerState.Add("pZ", player.Position.z);
-            dictPlayerState.Add("rX", player.Rotation.x);
-            dictPlayerState.Add("rY", player.Rotation.y);
-
-            // --- Positional 
-            dictPlayerState.Add("pose", player.MovementContext.PoseLevel);
-            //dictPlayerState.Add("spd", player.MovementContext.CharacterMovementSpeed);
-            dictPlayerState.Add("spr", player.Physical.Sprinting);
-            //if (player.MovementContext.IsSprintEnabled)
-            //{
-            //    prc.ReplicatedDirection = new Vector2(1, 0);
-            //}
-            //dictPlayerState.Add("tp", prc.TriggerPressed);
-            dictPlayerState.Add("alive", player.HealthController.IsAlive);
-            dictPlayerState.Add("tilt", player.MovementContext.Tilt);
-            dictPlayerState.Add("prn", player.MovementContext.IsInPronePose);
-
-            dictPlayerState.Add("t", DateTime.Now.Ticks.ToString("G"));
-            // ---------- 
-            //dictPlayerState.Add("p.hs.c", player.Physical.HandsStamina.Current);
-            //dictPlayerState.Add("p.hs.t", player.Physical.HandsStamina.TotalCapacity.Value);
-            //dictPlayerState.Add("p.s.c", player.Physical.Stamina.Current);
-            //dictPlayerState.Add("p.s.t", player.Physical.Stamina.TotalCapacity.Value);
-            //
-            if (prc.ReplicatedDirection.HasValue)
-            {
-                dictPlayerState.Add("dX", prc.ReplicatedDirection.Value.x);
-                dictPlayerState.Add("dY", prc.ReplicatedDirection.Value.y);
-            }
-
-            // ---------- 
-            /*
-            if (player.PlayerHealthController != null)
-            {
-                foreach (var b in Enum.GetValues(typeof(EBodyPart)))
-                {
-                    var effects = player.PlayerHealthController
-                        .GetAllActiveEffects((EBodyPart)b).Where(x => !x.ToString().Contains("Exist"))
-                        .Select(x => x.ToString());
-
-                    if (!effects.Any())
-                        continue;
-
-                    var k = "hE." + b.ToString();
-                    //Logger.LogInfo(k);
-                    //Logger.LogInfo(effects.ToJson());
-                    dictPlayerState.Add(k, effects.ToJson());
-                }
-
-            }
-            */
-            // ---------- 
-            if (player.HealthController.IsAlive)
-            {
-                foreach (EBodyPart bodyPart in Enum.GetValues(typeof(EBodyPart)))
-                {
-                    if (bodyPart == EBodyPart.Common)
-                        continue;
-
-                    var health = player.HealthController.GetBodyPartHealth(bodyPart);
-                    dictPlayerState.Add($"hp.{bodyPart}", health.Current);
-                    dictPlayerState.Add($"hp.{bodyPart}.m", health.Maximum);
-                }
-
-                dictPlayerState.Add("en", player.HealthController.Energy.Current);
-                dictPlayerState.Add("hy", player.HealthController.Hydration.Current);
-            }
-            // ----------
-            dictPlayerState.Add("m", "PlayerState");
-
-            playerStates.Add(dictPlayerState);
-        }
-
-        private DateTime LastPlayerStateSent { get; set; } = DateTime.Now;
         public ulong LocalIndex { get; set; }
 
         public float LocalTime => 0;
@@ -1269,40 +1082,20 @@ namespace StayInTarkov.Coop
                 middleLargeLabelStyle.fontSize = 24;
             }
 
-            var rect = new UnityEngine.Rect(GuiX, 5, GuiWidth, 100);
+            var rect = new Rect(GuiX, 5, GuiWidth, 100);
 
             rect.y = 5;
             GUI.Label(rect, $"SIT Coop: " + (MatchmakerAcceptPatches.IsClient ? "CLIENT" : "SERVER"));
             rect.y += 15;
 
             // PING ------
-            GUI.contentColor = Color.white;
-            GUI.contentColor = ServerPing >= AkiBackendCommunication.PING_LIMIT_HIGH ? Color.red : ServerPing >= AkiBackendCommunication.PING_LIMIT_MID ? Color.yellow : Color.green;
-            GUI.Label(rect, $"RTT:{(ServerPing)}");
-            rect.y += 15;
-            GUI.Label(rect, $"Host RTT:{(ServerPing + AkiBackendCommunication.Instance.HostPing)}");
-            rect.y += 15;
-            if (MatchmakerAcceptPatches.IsClient)
+            if (MatchmakerAcceptPatches.IsClient && MyPlayer.Client != null)
             {
-                GUI.Label(rect, $"UDP Ping:{MyPlayer.Client.Ping}");
-                rect.y += 15;
-            }
-            GUI.contentColor = Color.white;
-
-            if (PerformanceCheck_ActionPackets)
-            {
-                GUI.contentColor = Color.red;
-                GUI.Label(rect, $"BAD PERFORMANCE!");
                 GUI.contentColor = Color.white;
+                GUI.contentColor = MyPlayer.Client.Ping >= AkiBackendCommunication.PING_LIMIT_HIGH ? Color.red : ServerPing >= AkiBackendCommunication.PING_LIMIT_MID ? Color.yellow : Color.green;
+                GUI.Label(rect, $"Ping:{MyPlayer.Client.Ping}");
                 rect.y += 15;
-            }
-
-            if (AkiBackendCommunication.Instance.HighPingMode)
-            {
-                GUI.contentColor = Color.red;
-                GUI.Label(rect, $"!HIGH PING MODE!");
-                GUI.contentColor = Color.white;
-                rect.y += 15;
+                GUI.contentColor = Color.white; 
             }
 
 
@@ -1312,7 +1105,7 @@ namespace StayInTarkov.Coop
 
             var w = 0.5f; // proportional width (0..1)
             var h = 0.2f; // proportional height (0..1)
-            var rectEndOfGameMessage = UnityEngine.Rect.zero;
+            var rectEndOfGameMessage = Rect.zero;
             rectEndOfGameMessage.x = (float)(Screen.width * (1 - w)) / 2;
             rectEndOfGameMessage.y = (float)(Screen.height * (1 - h)) / 2 + (Screen.height / 3);
             rectEndOfGameMessage.width = Screen.width * w;
@@ -1392,7 +1185,7 @@ namespace StayInTarkov.Coop
             return rect;
         }
 
-        private void OnGUI_DrawPlayerFriendlyTags(UnityEngine.Rect rect)
+        private void OnGUI_DrawPlayerFriendlyTags(Rect rect)
         {
             if (SITConfig == null)
             {

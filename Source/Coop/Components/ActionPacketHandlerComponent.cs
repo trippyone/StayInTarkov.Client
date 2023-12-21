@@ -170,63 +170,63 @@ namespace StayInTarkov.Coop.Components
             }
 
             bool result = ProcessPlayerPacket(packet);
-            if (!result)
-                result = ProcessWorldPacket(ref packet);
+            //if (!result)
+            //    result = ProcessWorldPacket(ref packet);
 
             return result;
         }
 
-        bool ProcessWorldPacket(ref Dictionary<string, object> packet)
-        {
-            // this isn't a world packet. return true
-            if (packet.ContainsKey("profileId"))
-                return true;
+        //bool ProcessWorldPacket(ref Dictionary<string, object> packet)
+        //{
+        //    // this isn't a world packet. return true
+        //    if (packet.ContainsKey("profileId"))
+        //        return true;
 
-            // this isn't a world packet. return true
-            if (!packet.ContainsKey("m"))
-                return true;
+        //    // this isn't a world packet. return true
+        //    if (!packet.ContainsKey("m"))
+        //        return true;
 
-            var result = false;
-            string method = packet["m"].ToString();
+        //    var result = false;
+        //    string method = packet["m"].ToString();
 
-            foreach (var coopPatch in CoopPatches.NoMRPPatches)
-            {
-                if (coopPatch is IModuleReplicationWorldPatch imrwp)
-                {
-                    if (imrwp.MethodName == method)
-                    {
-                        imrwp.Replicated(ref packet);
-                        result = true;
-                    }
-                }
-            }
+        //    foreach (var coopPatch in CoopPatches.NoMRPPatches)
+        //    {
+        //        if (coopPatch is IModuleReplicationWorldPatch imrwp)
+        //        {
+        //            if (imrwp.MethodName == method)
+        //            {
+        //                imrwp.Replicated(ref packet);
+        //                result = true;
+        //            }
+        //        }
+        //    }
 
-            switch (method)
-            {
-                case "AirdropPacket":
-                    ReplicateAirdrop(packet);
-                    result = true;
-                    break;
-                case "AirdropLootPacket":
-                    ReplicateAirdropLoot(packet);
-                    result = true;
-                    break;
-                //case "RaidTimer":
-                //    ReplicateRaidTimer(packet);
-                //    result = true;
-                //    break;
-                //case "TimeAndWeather":
-                //    ReplicateTimeAndWeather(packet);
-                //    result = true;
-                //    break;
-                case "LootableContainer_Interact":
-                    LootableContainer_Interact_Patch.Replicated(packet);
-                    result = true;
-                    break;
-            }
+        //    switch (method)
+        //    {
+        //        case "AirdropPacket":
+        //            ReplicateAirdrop(packet);
+        //            result = true;
+        //            break;
+        //        case "AirdropLootPacket":
+        //            ReplicateAirdropLoot(packet);
+        //            result = true;
+        //            break;
+        //        //case "RaidTimer":
+        //        //    ReplicateRaidTimer(packet);
+        //        //    result = true;
+        //        //    break;
+        //        //case "TimeAndWeather":
+        //        //    ReplicateTimeAndWeather(packet);
+        //        //    result = true;
+        //        //    break;
+        //        case "LootableContainer_Interact":
+        //            LootableContainer_Interact_Patch.Replicated(packet);
+        //            result = true;
+        //            break;
+        //    }
 
-            return result;
-        }
+        //    return result;
+        //}
 
         bool ProcessPlayerPacket(Dictionary<string, object> packet)
         {

@@ -76,7 +76,8 @@ namespace StayInTarkov.AkiSupport.Airdrops.Utils
 
         public static bool ShouldAirdropOccur(int dropChance, List<AirdropPoint> airdropPoints)
         {
-            return airdropPoints.Count > 0 && Random.Range(0, 100) <= dropChance;
+            return true;
+            //return airdropPoints.Count > 0 && Random.Range(0, 100) <= dropChance;
         }
 
         public static AirdropParametersModel InitAirdropParams(GameWorld gameWorld, bool isFlare)

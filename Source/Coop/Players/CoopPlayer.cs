@@ -586,7 +586,7 @@ namespace StayInTarkov.Coop.Players
                     goto SkipWorld;
                 }
 
-                WorldInteractiveObject worldInteractiveObject = coopGameComponent.ListOfInteractiveObjects.FirstOrDefault(x => x.Id == packet.WorldInteractionPacket.InteractiveId);
+                WorldInteractiveObject worldInteractiveObject = coopGameComponent.ListOfInteractiveObjects.FirstOrDefault(x => x.NetId == packet.WorldInteractionPacket.NetId);
 
                 if (worldInteractiveObject == null)
                 {
@@ -647,7 +647,7 @@ namespace StayInTarkov.Coop.Players
             if (packet.HasContainerInteractionPacket)
             {
                 CoopGameComponent coopGameComponent = CoopGameComponent.GetCoopGameComponent();
-                LootableContainer lootableContainer = coopGameComponent.ListOfInteractiveObjects.FirstOrDefault(x => x.Id == packet.ContainerInteractionPacket.InteractiveId) as LootableContainer;
+                LootableContainer lootableContainer = coopGameComponent.ListOfInteractiveObjects.FirstOrDefault(x => x.NetId == packet.ContainerInteractionPacket.NetId) as LootableContainer;
 
                 if (lootableContainer != null)
                 {

@@ -41,6 +41,9 @@ namespace StayInTarkov.Coop.Player.InteractionPatches
             GridItemAddressDescriptor addressDescriptor = null;
             bool keySuccess = false;
 
+            if (interactive.Id == null)
+                return;
+
             var botPlayer = GetPlayerByMovementState(__instance) as CoopBot;
             if (botPlayer != null)
             {
@@ -75,7 +78,7 @@ namespace StayInTarkov.Coop.Player.InteractionPatches
                     botPlayer.CommonPlayerPacket.WorldInteractionPacket = new()
                     {
                         IsStart = true,
-                        InteractiveId = interactive.Id,
+                        NetId = interactive.NetId,
                         InteractionType = interactionResult.InteractionType,
                         HasKey = true,
                         KeyItemId = keyItemId,
@@ -89,7 +92,7 @@ namespace StayInTarkov.Coop.Player.InteractionPatches
                     botPlayer.CommonPlayerPacket.WorldInteractionPacket = new()
                     {
                         IsStart = true,
-                        InteractiveId = interactive.Id,
+                        NetId = interactive.NetId,
                         InteractionType = interactionResult.InteractionType
                     };
                 }
@@ -132,7 +135,7 @@ namespace StayInTarkov.Coop.Player.InteractionPatches
                 player.CommonPlayerPacket.WorldInteractionPacket = new()
                 {
                     IsStart = true,
-                    InteractiveId = interactive.Id,
+                    NetId = interactive.NetId,
                     InteractionType = interactionResult.InteractionType,
                     HasKey = true,
                     KeyItemId = keyItemId,
@@ -146,7 +149,7 @@ namespace StayInTarkov.Coop.Player.InteractionPatches
                 player.CommonPlayerPacket.WorldInteractionPacket = new()
                 {
                     IsStart = true,
-                    InteractiveId = interactive.Id,
+                    NetId = interactive.NetId,
                     InteractionType = interactionResult.InteractionType
                 };
             }

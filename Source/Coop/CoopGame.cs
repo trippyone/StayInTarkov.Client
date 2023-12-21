@@ -522,7 +522,7 @@ namespace StayInTarkov.Coop
                                     }
                                     else
                                     {
-                                        MatchmakerAcceptPatches.TimeHasComeScreenController.ChangeStatus($"All players joined, starting game.", null);
+                                        MatchmakerAcceptPatches.TimeHasComeScreenController.ChangeStatus($"All players joined, starting game...", null);
                                     }
                                 }
                                 coopGameComponent.MyPlayer.Client.SendData(coopGameComponent.MyPlayer.Writer, ref packet, LiteNetLib.DeliveryMethod.ReliableUnordered);

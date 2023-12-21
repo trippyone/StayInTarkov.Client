@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using static RootMotion.FinalIK.InteractionTrigger.Range;
 
 namespace StayInTarkov.Coop.World
 {
@@ -36,15 +37,18 @@ namespace StayInTarkov.Coop.World
             return true;
         }
 
-        [PatchPrefix]
-        public static bool Prefix(LootableContainer __instance)
-        {
-            return false;
-        }
+        //[PatchPrefix]
+        //public static bool Prefix(LootableContainer __instance)
+        //{
+        //    return false;
+        //}
 
         [PatchPostfix]
         public static void Postfix(LootableContainer __instance, InteractionResult interactionResult)
         {
+            if (__instance.Id == null)
+                return;
+
             var player = Singleton<GameWorld>.Instance.MainPlayer as CoopPlayer;
             if (player == null)
                 return;
@@ -52,24 +56,12 @@ namespace StayInTarkov.Coop.World
             player.CommonPlayerPacket.HasContainerInteractionPacket = true;
             player.CommonPlayerPacket.ContainerInteractionPacket = new()
             {
-                InteractiveId = __instance.Id,
+                NetId = __instance.NetId,
                 InteractionType = interactionResult.InteractionType
             };
             player.CommonPlayerPacket.ToggleSend();
 
             EFT.UI.ConsoleScreen.Log($"Sending ContainerInteractionPacket on {__instance.Id}");
-
-
-            //Dictionary<string, object> packet = new()
-            //{
-            //    { "t", DateTime.Now.Ticks.ToString("G") },
-            //    { "serverId", CoopGameComponent.GetServerId() },
-            //    { "m", MethodName },
-            //    { "lootableContainerId", __instance.Id },
-            //    { "type", interactionResult.InteractionType.ToString() }
-            //};
-
-            //AkiBackendCommunication.Instance.PostDownWebSocketImmediately(packet);
         }
 
         public static void Replicated(Dictionary<string, object> packet)
