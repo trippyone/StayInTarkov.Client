@@ -269,7 +269,7 @@ namespace Aki.Custom.Airdrops
 
         private IEnumerator SendLootToClients(AirdropLootResultModel lootData, AirdropConfigModel config)
         {
-            yield return new WaitForSeconds(10);
+            yield return new WaitForSeconds(45);
 
             Logger.LogInfo("Sending Airdrop Loot to clients.");
             AirdropLootPacket lootPacket = new()

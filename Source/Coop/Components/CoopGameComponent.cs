@@ -732,10 +732,14 @@ namespace StayInTarkov.Coop
 
         public void TestCreateObserved(Profile profile, Vector3 position, bool isAlive = true)
         {
-            bool isAi = true;
-            if (profile.ProfileId.StartsWith("pmc"))
-                isAi = false;
-            ProcessPlayerBotSpawn2(profile.ProfileId, position, isAi, profile, isAlive);
+
+            if (Singleton<AbstractGame>.Instantiated && (Singleton<AbstractGame>.Instance.Status == GameStatus.Starting || Singleton<AbstractGame>.Instance.Status == GameStatus.Started))
+            {
+                bool isAi = true;
+                if (profile.ProfileId.StartsWith("pmc"))
+                    isAi = false;
+                ProcessPlayerBotSpawn2(profile.ProfileId, position, isAi, profile, isAlive); 
+            }
         }
 
         private void CreatePhysicalOtherPlayerOrBot(Profile profile, Vector3 position, bool isDead = false)

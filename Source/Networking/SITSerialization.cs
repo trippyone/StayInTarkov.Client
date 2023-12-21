@@ -365,21 +365,40 @@ namespace StayInTarkov.Networking
 
         public struct HeadLightsPacket
         {
-            public bool TogglesActive { get; set; }
-            public bool ChangesState { get; set; }
+            public int Amount { get; set; }
+            public LightsStates[] LightStates { get; set; }
             public static HeadLightsPacket Deserialize(NetDataReader reader)
             {
-                return new HeadLightsPacket
+                HeadLightsPacket packet = new();
+                packet.Amount = reader.GetInt();
+                if (packet.Amount > 0)
                 {
-                    TogglesActive = reader.GetBool(),
-                    ChangesState = reader.GetBool()
-                };
+                    packet.LightStates = new LightsStates[packet.Amount];
+                    for (int i = 0; i < packet.Amount; i++)
+                    {
+                        packet.LightStates[i] = new()
+                        {
+                            Id = reader.GetString(),
+                            IsActive = reader.GetBool(),
+                            LightMode = reader.GetInt()
+                        };
+                    }
+                }
+                return packet;
             }
 
             public static void Serialize(NetDataWriter writer, HeadLightsPacket packet)
             {
-                writer.Put(packet.TogglesActive);
-                writer.Put(packet.ChangesState);
+                writer.Put(packet.Amount);
+                if (packet.Amount > 0)
+                {
+                    for (int i = 0; i < packet.Amount; i++)
+                    {
+                        writer.Put(packet.LightStates[i].Id);
+                        writer.Put(packet.LightStates[i].IsActive);
+                        writer.Put(packet.LightStates[i].LightMode);
+                    }
+                }
             }
         }
 

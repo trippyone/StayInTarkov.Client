@@ -110,7 +110,7 @@ namespace StayInTarkov.Coop
             // TODO: Do this on ApplyShot instead, and check if instigator is local
             // Also do check if it's a server and shooter is AI
 
-            if (MainPlayer.Profile != damageInfo.Player.iPlayer.Profile && !damageInfo.Player.iPlayer.IsAI)
+            if (damageInfo.Player != null && damageInfo.Player is ObservedCoopPlayer)
                 return;
 
             HealthPacket.HasDamageInfo = true;
@@ -131,12 +131,6 @@ namespace StayInTarkov.Coop
             return base.ApplyShot(damageInfo, bodyPartType, shotId);
         }
 
-        public override Corpse CreateCorpse()
-        {
-            StopCoroutine(SendStatePacket());
-            return base.CreateCorpse();
-        }
-
         public override void OnItemAddedOrRemoved(Item item, ItemAddress location, bool added)
         {
             base.OnItemAddedOrRemoved(item, location, added);
@@ -154,7 +148,7 @@ namespace StayInTarkov.Coop
                 {
                     PlayerStatePacket playerStatePacket = new(ProfileId, Position, Rotation, HeadRotation,
                             MovementContext.MovementDirection, CurrentManagedState.Name, MovementContext.Tilt,
-                            MovementContext.Step, CurrentAnimatorStateIndex, MovementContext.CharacterMovementSpeed,
+                            MovementContext.Step, CurrentAnimatorStateIndex, MovementContext.SmoothedCharacterMovementSpeed,
                             IsInPronePose, PoseLevel, MovementContext.IsSprintEnabled, Physical.SerializationStruct, InputDirection,
                             MovementContext.BlindFire, MovementContext.ActualLinearSpeed);
 

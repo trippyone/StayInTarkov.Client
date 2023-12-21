@@ -74,7 +74,7 @@ namespace StayInTarkov.Coop.Player.Health
             }
 
             var observedPlayer = __instance.Player as ObservedCoopPlayer;
-            if (observedPlayer != null && !observedPlayer.ProfileId.StartsWith("pmc")) // TODO: Check bool
+            if (observedPlayer != null && observedPlayer.IsObservedAI) // TODO: Check bool
             {
                 observedPlayer.HealthPacket.HasObservedDeathPacket = true;
                 observedPlayer.HealthPacket.ObservedDeathPacket = new()

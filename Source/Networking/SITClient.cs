@@ -97,7 +97,7 @@ namespace StayInTarkov.Networking
             }
             else
             {
-                EFT.UI.ConsoleScreen.LogError("OnAirdropLootPacketReceived: Received loot package but manager is not instantiated!");
+                EFT.UI.ConsoleScreen.LogError("OnAirdropPacketReceived: Received package but manager is not instantiated!");
             }
         }
 

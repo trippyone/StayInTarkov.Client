@@ -150,11 +150,6 @@ namespace StayInTarkov.Coop
                     }
                 }
 
-                //foreach (var pl in GameObject.FindObjectsOfType<CoopPlayer>())
-                //{
-                //    GameObject.DestroyImmediate(pl);
-                //}
-
                 coopGameComponent.RunAsyncTasks = false;
                 GameObject.DestroyImmediate(coopGameComponent);
             }

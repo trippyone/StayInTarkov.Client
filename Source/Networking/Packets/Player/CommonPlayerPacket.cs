@@ -16,7 +16,7 @@ namespace StayInTarkov.Networking.Packets
         public ContainerInteractionPacket ContainerInteractionPacket { get; set; }
         public bool HasProceedPacket { get; set; }
         public ProceedPacket ProceedPacket { get; set; }
-        public bool HasHeadLightsPackage { get; set; }
+        public bool HasHeadLightsPacket { get; set; }
         public HeadLightsPacket HeadLightsPacket { get; set; }
         public bool HasInventoryChanged { get; set; }
         public bool SetInventoryOpen { get; set; }
@@ -29,7 +29,7 @@ namespace StayInTarkov.Networking.Packets
             HasWorldInteractionPacket = false;
             HasContainerInteractionPacket = false;
             HasProceedPacket = false;
-            HasHeadLightsPackage = false;
+            HasHeadLightsPacket = false;
             HasInventoryChanged = false;
             HasDrop = false;
         }
@@ -48,8 +48,8 @@ namespace StayInTarkov.Networking.Packets
             HasProceedPacket = reader.GetBool();
             if (HasProceedPacket)
                 ProceedPacket = ProceedPacket.Deserialize(reader);
-            HasHeadLightsPackage = reader.GetBool();
-            if (HasHeadLightsPackage)
+            HasHeadLightsPacket = reader.GetBool();
+            if (HasHeadLightsPacket)
                 HeadLightsPacket = HeadLightsPacket.Deserialize(reader);
             HasInventoryChanged = reader.GetBool();
             if (HasInventoryChanged)
@@ -72,8 +72,8 @@ namespace StayInTarkov.Networking.Packets
             writer.Put(HasProceedPacket);
             if (HasProceedPacket)
                 ProceedPacket.Serialize(writer, ProceedPacket);
-            writer.Put(HasHeadLightsPackage);
-            if (HasHeadLightsPackage)
+            writer.Put(HasHeadLightsPacket);
+            if (HasHeadLightsPacket)
                 HeadLightsPacket.Serialize(writer, HeadLightsPacket);
             writer.Put(HasInventoryChanged);
             if (HasInventoryChanged)

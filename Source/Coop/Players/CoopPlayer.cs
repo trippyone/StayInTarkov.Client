@@ -307,17 +307,16 @@ namespace StayInTarkov.Coop.Players
             return base.ApplyShot(damageInfo, bodyPartType, shotId);
         }
 
-        private IEnumerator OnDeath()
+        public override void SendHeadlightsPacket(bool isSilent)
         {
-            yield return new WaitForSeconds(1);
-            StopCoroutine(SendStatePacket());
-            yield break;
-        }
-
-        public override void OnDead(EDamageType damageType)
-        {
-            //StartCoroutine(OnDeath());
-            base.OnDead(damageType);
+            LightsStates[] lightStates = _helmetLightControllers.Select(new Func<TacticalComboVisualController, LightsStates>(ClientPlayer.Class1383.class1383_0.method_0)).ToArray();
+            CommonPlayerPacket.HasHeadLightsPacket = true;
+            CommonPlayerPacket.HeadLightsPacket = new()
+            {
+                Amount = lightStates.Count(),
+                LightStates = lightStates
+            };
+            CommonPlayerPacket.ToggleSend();
         }
 
         public override void OnItemAddedOrRemoved(Item item, ItemAddress location, bool added)
@@ -329,9 +328,12 @@ namespace StayInTarkov.Coop.Players
         {
             base.OnPhraseTold(@event, clip, bank, speaker);
 
-            CommonPlayerPacket.Phrase = @event;
-            CommonPlayerPacket.PhraseIndex = clip.NetId;
-            CommonPlayerPacket.ToggleSend();
+            if (ActiveHealthController.IsAlive)
+            {
+                CommonPlayerPacket.Phrase = @event;
+                CommonPlayerPacket.PhraseIndex = clip.NetId;
+                CommonPlayerPacket.ToggleSend(); 
+            }
         }
 
         protected virtual void ReceiveSay(EPhraseTrigger trigger, int index)
@@ -418,7 +420,7 @@ namespace StayInTarkov.Coop.Players
                 {
                     PlayerStatePacket playerStatePacket = new(ProfileId, Position, Rotation, HeadRotation,
                             MovementContext.MovementDirection, CurrentManagedState.Name, MovementContext.Tilt,
-                            MovementContext.Step, CurrentAnimatorStateIndex, MovementContext.CharacterMovementSpeed,
+                            MovementContext.Step, CurrentAnimatorStateIndex, MovementContext.SmoothedCharacterMovementSpeed,
                             IsInPronePose, PoseLevel, MovementContext.IsSprintEnabled, Physical.SerializationStruct, InputDirection,
                             MovementContext.BlindFire, MovementContext.ActualLinearSpeed);
 
@@ -458,7 +460,7 @@ namespace StayInTarkov.Coop.Players
                 {
                     PlayerStatePacket playerStatePacket = new(ProfileId, Position, Rotation, HeadRotation,
                             MovementContext.MovementDirection, CurrentManagedState.Name, MovementContext.Tilt,
-                            MovementContext.Step, CurrentAnimatorStateIndex, MovementContext.CharacterMovementSpeed,
+                            MovementContext.Step, CurrentAnimatorStateIndex, MovementContext.SmoothedCharacterMovementSpeed,
                             IsInPronePose, PoseLevel, MovementContext.IsSprintEnabled, Physical.SerializationStruct, InputDirection,
                             MovementContext.BlindFire, MovementContext.ActualLinearSpeed);
 
@@ -881,8 +883,14 @@ namespace StayInTarkov.Coop.Players
                 }
             }
 
-            if (packet.HasHeadLightsPackage)
-                SwitchHeadLights(packet.HeadLightsPacket.TogglesActive, packet.HeadLightsPacket.ChangesState);
+            if (packet.HasHeadLightsPacket)
+            {
+                for (int i = 0; i < _helmetLightControllers.Count(); i++)
+                {
+                    _helmetLightControllers.ElementAt(i).LightMod.SetLightState(packet.HeadLightsPacket.LightStates[i]);
+                }
+                SwitchHeadLightsAnimation();
+            }
 
             if (packet.HasInventoryChanged)
                 base.SetInventoryOpened(packet.SetInventoryOpen);
@@ -981,6 +989,7 @@ namespace StayInTarkov.Coop.Players
 
             var firearmController = HandsController as FirearmController;
             var packet = FirearmPackets.Dequeue();
+
             if (firearmController != null)
             {
                 if (packet.HasMalfunction)
@@ -1343,11 +1352,11 @@ namespace StayInTarkov.Coop.Players
 
             if (packet.HasObservedDeathPacket)
             {
-                ActiveHealthController.Kill(packet.ObservedDeathPacket.DamageType);
-                if (HandsController is FirearmController firearmCont)
+                if (HandsController is FirearmController firearmController)
                 {
-                    firearmCont.SetTriggerPressed(false);
+                    firearmController.SetTriggerPressed(false);
                 }
+                ActiveHealthController.Kill(packet.ObservedDeathPacket.DamageType);                
             }
         }
 

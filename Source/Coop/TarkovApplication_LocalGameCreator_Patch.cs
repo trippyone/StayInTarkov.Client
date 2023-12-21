@@ -88,10 +88,10 @@ namespace StayInTarkov.Coop
             MatchmakerAcceptPatches.TimeHasComeScreenController = timeHasComeScreenController;
 
             //Logger.LogDebug("TarkovApplication_LocalGameCreator_Patch:Postfix");
-            //if (Singleton<NotificationManagerClass>.Instantiated)
-            //{
-            //    Singleton<NotificationManagerClass>.Instance.Deactivate();
-            //}
+            if (Singleton<NotificationManagerClass>.Instantiated)
+            {
+                Singleton<NotificationManagerClass>.Instance.Deactivate();
+            }
 
             Logger.LogDebug("TarkovApplication_LocalGameCreator_Patch:Postfix: Attempt to get Session");
 

@@ -4,8 +4,9 @@ using LiteNetLib.Utils;
 
 namespace StayInTarkov.Networking.Packets
 {
-    public struct AirdropLootPacket : INetSerializable
+    public struct AirdropLootPacket(bool isRequest = false) : INetSerializable
     {
+        public bool IsRequest { get; set; } = isRequest;
         public int LootLength { get; set; }
         public AirdropLootResultModel Loot { get; set; }
         public int ConfigLength { get; set; }
@@ -13,6 +14,7 @@ namespace StayInTarkov.Networking.Packets
 
         public void Deserialize(NetDataReader reader)
         {
+            IsRequest = reader.GetBool();
             LootLength = reader.GetInt();
             byte[] modelBytes = new byte[LootLength];
             reader.GetBytes(modelBytes, LootLength);
@@ -25,6 +27,7 @@ namespace StayInTarkov.Networking.Packets
 
         public void Serialize(NetDataWriter writer)
         {
+            writer.Put(IsRequest);
             byte[] modelBytes = SimpleZlib.CompressToBytes(Loot.ToJson(), 9, null);
             writer.Put(modelBytes.Length);
             writer.Put(modelBytes);

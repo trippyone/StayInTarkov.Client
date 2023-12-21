@@ -12,7 +12,7 @@ namespace StayInTarkov.Coop.ItemControllerPatches
 {
     internal class ItemController_Execute_Patch : ModuleReplicationPatch, IModuleReplicationWorldPatch
     {
-        public override Type InstanceType => typeof(ItemController);
+        public override Type InstanceType => typeof(EFT.Player.PlayerInventoryController);
 
         public override string MethodName => "Execute";
 
@@ -29,7 +29,7 @@ namespace StayInTarkov.Coop.ItemControllerPatches
         }
 
         [PatchPostfix]
-        public static void Postfix(ItemController __instance, AbstractInventoryOperation operation, [CanBeNull] Callback callback)
+        public static void Postfix(EFT.Player.PlayerInventoryController __instance, AbstractInventoryOperation operation, [CanBeNull] Callback callback)
         {
             var player = Singleton<GameWorld>.Instance.MainPlayer as CoopPlayer;
             if (player == null || !player.IsYourPlayer && !MatchmakerAcceptPatches.IsServer && !player.IsAI)
