@@ -3,6 +3,7 @@ using EFT;
 using EFT.HealthSystem;
 using EFT.Interactive;
 using EFT.InventoryLogic;
+using StayInTarkov.Coop.Controllers;
 using StayInTarkov.Coop.Matchmaker;
 using StayInTarkov.Core.Player;
 using StayInTarkov.Networking.Packets;
@@ -63,7 +64,7 @@ namespace StayInTarkov.Coop.Players
 
             player.IsYourPlayer = false;
 
-            InventoryController inventoryController = new PlayerInventoryController(player, profile, true);
+            InventoryController inventoryController = new ObservedInventoryController(player, profile, false);
 
             if (questController == null && isYourPlayer)
             {

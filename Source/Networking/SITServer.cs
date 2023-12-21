@@ -194,7 +194,6 @@ namespace StayInTarkov.Networking
 
         private void OnWeatherPacketReceived(WeatherPacket packet, NetPeer peer)
         {
-            EFT.UI.ConsoleScreen.Log($"Received weather synchronization packet. IsRequest: {packet.IsRequest}");
             if (!packet.IsRequest)
                 return;
 
@@ -225,7 +224,6 @@ namespace StayInTarkov.Networking
 
         private void OnGameTimerPacketReceived(GameTimerPacket packet, NetPeer peer)
         {
-            EFT.UI.ConsoleScreen.Log($"Received game timer synchronization packet. IsRequest: {packet.IsRequest}");
             if (!packet.IsRequest)
                 return;
 

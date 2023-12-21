@@ -917,7 +917,7 @@ namespace StayInTarkov.Networking
 
         public struct WorldInteractionPacket
         {
-            public int NetId { get; set; }
+            public string InteractiveId { get; set; }
             public EInteractionType InteractionType { get; set; }
             public bool IsStart { get; set; }
             public bool HasKey { get; set; }
@@ -929,7 +929,7 @@ namespace StayInTarkov.Networking
             public static WorldInteractionPacket Deserialize(NetDataReader reader)
             {
                 WorldInteractionPacket packet = new();
-                packet.NetId = reader.GetInt();
+                packet.InteractiveId = reader.GetString();
                 packet.InteractionType = (EInteractionType)reader.GetInt();
                 packet.IsStart = reader.GetBool();
                 packet.HasKey = reader.GetBool();
@@ -945,7 +945,7 @@ namespace StayInTarkov.Networking
 
             public static void Serialize(NetDataWriter writer, WorldInteractionPacket packet)
             {
-                writer.Put(packet.NetId);
+                writer.Put(packet.InteractiveId);
                 writer.Put((int)packet.InteractionType);
                 writer.Put(packet.IsStart);
                 writer.Put(packet.HasKey);
@@ -961,19 +961,19 @@ namespace StayInTarkov.Networking
 
         public struct ContainerInteractionPacket
         {
-            public int NetId { get; set; }
+            public string InteractiveId { get; set; }
             public EInteractionType InteractionType { get; set; }
 
             public static ContainerInteractionPacket Deserialize(NetDataReader reader)
             {
                 ContainerInteractionPacket packet = new();
-                packet.NetId = reader.GetInt();
+                packet.InteractiveId = reader.GetString();
                 packet.InteractionType = (EInteractionType)reader.GetInt();
                 return packet;
             }
             public static void Serialize(NetDataWriter writer, ContainerInteractionPacket packet)
             {
-                writer.Put(packet.NetId);
+                writer.Put(packet.InteractiveId);
                 writer.Put((int)packet.InteractionType);
             }
         }

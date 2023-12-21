@@ -48,6 +48,8 @@ namespace StayInTarkov.Networking.Packets
         public SITSerialization.ReloadBarrelsPacket ReloadBarrels { get; set; }
         public bool HasGrenadePacket { get; set; }
         public SITSerialization.GrenadePacket GrenadePacket { get; set; }
+        public bool HasCompassChange { get; set; }
+        public bool CompassState { get; set; }
 
         public WeaponPacket(string profileId)
         {
@@ -75,7 +77,7 @@ namespace StayInTarkov.Networking.Packets
             HasReloadLauncherPacket = false;
             HasReloadBarrelsPacket = false;
             HasGrenadePacket = false;
-
+            HasCompassChange = false;
         }
 
         public void Deserialize(NetDataReader reader)
@@ -127,6 +129,9 @@ namespace StayInTarkov.Networking.Packets
             HasGrenadePacket = reader.GetBool();
             if (HasGrenadePacket)
                 GrenadePacket = SITSerialization.GrenadePacket.Deserialize(reader);
+            HasCompassChange = reader.GetBool();
+            if (HasCompassChange)
+                CompassState = reader.GetBool();
         }
 
         public void Serialize(NetDataWriter writer)
@@ -178,6 +183,9 @@ namespace StayInTarkov.Networking.Packets
             writer.Put(HasGrenadePacket);
             if (HasGrenadePacket)
                 SITSerialization.GrenadePacket.Serialize(writer, GrenadePacket);
+            writer.Put(HasCompassChange);
+            if (HasCompassChange)
+                writer.Put(CompassState);
         }
 
         public void ToggleSend()

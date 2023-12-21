@@ -78,7 +78,7 @@ namespace StayInTarkov.Coop.Player.InteractionPatches
                     botPlayer.CommonPlayerPacket.WorldInteractionPacket = new()
                     {
                         IsStart = true,
-                        NetId = interactive.NetId,
+                        InteractiveId = interactive.Id,
                         InteractionType = interactionResult.InteractionType,
                         HasKey = true,
                         KeyItemId = keyItemId,
@@ -92,7 +92,7 @@ namespace StayInTarkov.Coop.Player.InteractionPatches
                     botPlayer.CommonPlayerPacket.WorldInteractionPacket = new()
                     {
                         IsStart = true,
-                        NetId = interactive.NetId,
+                        InteractiveId = interactive.Id,
                         InteractionType = interactionResult.InteractionType
                     };
                 }
@@ -135,7 +135,7 @@ namespace StayInTarkov.Coop.Player.InteractionPatches
                 player.CommonPlayerPacket.WorldInteractionPacket = new()
                 {
                     IsStart = true,
-                    NetId = interactive.NetId,
+                    InteractiveId = interactive.Id,
                     InteractionType = interactionResult.InteractionType,
                     HasKey = true,
                     KeyItemId = keyItemId,
@@ -149,7 +149,7 @@ namespace StayInTarkov.Coop.Player.InteractionPatches
                 player.CommonPlayerPacket.WorldInteractionPacket = new()
                 {
                     IsStart = true,
-                    NetId = interactive.NetId,
+                    InteractiveId = interactive.Id,
                     InteractionType = interactionResult.InteractionType
                 };
             }

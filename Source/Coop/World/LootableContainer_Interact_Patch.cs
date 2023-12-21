@@ -56,7 +56,7 @@ namespace StayInTarkov.Coop.World
             player.CommonPlayerPacket.HasContainerInteractionPacket = true;
             player.CommonPlayerPacket.ContainerInteractionPacket = new()
             {
-                NetId = __instance.NetId,
+                InteractiveId = __instance.Id,
                 InteractionType = interactionResult.InteractionType
             };
             player.CommonPlayerPacket.ToggleSend();

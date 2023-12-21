@@ -109,6 +109,16 @@ namespace StayInTarkov.Coop.Players
             return player;
         }
 
+        public override void OnSkillLevelChanged(AbstractSkill skill)
+        {
+            //base.OnSkillLevelChanged(skill);
+        }
+
+        public override void OnWeaponMastered(MasterSkill masterSkill)
+        {
+            //base.OnWeaponMastered(masterSkill);
+        }
+
         public override void ApplyDamageInfo(DamageInfo damageInfo, EBodyPart bodyPartType, float absorbed, EHeadSegment? headSegment = null)
         {
             HealthPacket.HasDamageInfo = true;
@@ -277,6 +287,14 @@ namespace StayInTarkov.Coop.Players
             CommonPlayerPacket.HasInventoryChanged = true;
             CommonPlayerPacket.SetInventoryOpen = opened;
             CommonPlayerPacket.ToggleSend();
+        }
+
+        public override void SetCompassState(bool value)
+        {
+            base.SetCompassState(value);
+            WeaponPacket.HasCompassChange = true;
+            WeaponPacket.CompassState = value;
+            WeaponPacket.ToggleSend();
         }
 
         public void ClientApplyDamageInfo(DamageInfo damageInfo, EBodyPart bodyPartType, float absorbed, EHeadSegment? headSegment = null)
@@ -586,7 +604,7 @@ namespace StayInTarkov.Coop.Players
                     goto SkipWorld;
                 }
 
-                WorldInteractiveObject worldInteractiveObject = coopGameComponent.ListOfInteractiveObjects.FirstOrDefault(x => x.NetId == packet.WorldInteractionPacket.NetId);
+                WorldInteractiveObject worldInteractiveObject = coopGameComponent.ListOfInteractiveObjects.FirstOrDefault(x => x.Id == packet.WorldInteractionPacket.InteractiveId);
 
                 if (worldInteractiveObject == null)
                 {
@@ -647,7 +665,7 @@ namespace StayInTarkov.Coop.Players
             if (packet.HasContainerInteractionPacket)
             {
                 CoopGameComponent coopGameComponent = CoopGameComponent.GetCoopGameComponent();
-                LootableContainer lootableContainer = coopGameComponent.ListOfInteractiveObjects.FirstOrDefault(x => x.NetId == packet.ContainerInteractionPacket.NetId) as LootableContainer;
+                LootableContainer lootableContainer = coopGameComponent.ListOfInteractiveObjects.FirstOrDefault(x => x.Id == packet.ContainerInteractionPacket.InteractiveId) as LootableContainer;
 
                 if (lootableContainer != null)
                 {
@@ -1240,6 +1258,14 @@ namespace StayInTarkov.Coop.Players
                 else
                 {
                     EFT.UI.ConsoleScreen.LogError($"HandleFirearmPacket::GrenadePacket: HandsController was not of type GrenadeController! Was {HandsController.GetType().Name}");
+                }
+            }
+
+            if (packet.HasCompassChange)
+            {
+                if (HandsController is ItemHandsController handsController)
+                {
+                    handsController.CompassStateHandler(isActive: packet.CompassState);
                 }
             }
         }

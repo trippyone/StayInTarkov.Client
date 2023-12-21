@@ -66,7 +66,6 @@ namespace StayInTarkov.Networking
 
         private void OnAirdropLootPacketReceived(AirdropLootPacket packet, NetPeer peer)
         {
-            EFT.UI.ConsoleScreen.Log("Received AirdropLootPacket!");
             if (!Singleton<SITAirdropsManager>.Instantiated)
             {
                 EFT.UI.ConsoleScreen.LogError("OnAirdropLootPacketReceived: Received loot package but manager is not instantiated!");
@@ -77,7 +76,6 @@ namespace StayInTarkov.Networking
 
         private void OnAirdropPacketReceived(AirdropPacket packet, NetPeer peer)
         {
-            EFT.UI.ConsoleScreen.Log("Received AirdropPacket!");
             if (Singleton<SITAirdropsManager>.Instantiated)
             {
                 Singleton<SITAirdropsManager>.Instance.AirdropParameters = new()
@@ -193,7 +191,6 @@ namespace StayInTarkov.Networking
 
         private void OnWeatherPacketReceived(WeatherPacket packet, NetPeer peer)
         {
-            EFT.UI.ConsoleScreen.Log("Received weather synchronization packet from server.");
             var weatherController = EFT.Weather.WeatherController.Instance;
             if (weatherController != null)
             {
@@ -279,7 +276,6 @@ namespace StayInTarkov.Networking
 
         private void OnGameTimerPacketReceived(GameTimerPacket packet, NetPeer peer)
         {
-            EFT.UI.ConsoleScreen.Log("Received game timer synchronization packet from server.");
             CoopGameComponent coopGameComponent = CoopGameComponent.GetCoopGameComponent();
             if (coopGameComponent == null)
                 return;
@@ -287,7 +283,6 @@ namespace StayInTarkov.Networking
             if (MatchmakerAcceptPatches.IsClient)
             {
                 var sessionTime = new TimeSpan(packet.Tick);
-                EFT.UI.ConsoleScreen.Log($"RaidTimer: Remaining session time {sessionTime.TraderFormat()}");
 
                 if (coopGameComponent.LocalGameInstance is CoopGame coopGame)
                 {
@@ -302,7 +297,6 @@ namespace StayInTarkov.Networking
                         if (Math.Abs(gameTimer.SessionTime.Value.TotalSeconds - timeRemain.TotalSeconds) < 5)
                             return;
 
-                        EFT.UI.ConsoleScreen.Log($"RaidTimer: New SessionTime {timeRemain.TraderFormat()}");
                         gameTimer.ChangeSessionTime(timeRemain);
 
                         // FIXME: Giving SetTime() with empty exfil point arrays has a known bug that may cause client game crashes!

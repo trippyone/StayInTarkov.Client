@@ -880,8 +880,8 @@ namespace StayInTarkov.Coop
                 () => Singleton<SettingsManager>.Instance.Control.Settings.MouseAimingSensitivity,
                 FilterCustomizationClass.Default,
                 null,
-                isYourPlayer: false,
-                isClientDrone: true).Result;
+                false,
+                true).Result;
 
 
             if (otherPlayer == null)
