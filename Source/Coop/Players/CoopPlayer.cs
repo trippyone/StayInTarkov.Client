@@ -39,7 +39,7 @@ namespace StayInTarkov.Coop.Players
         public InventoryPacketQueue InventoryPackets = new(100);
         public CommonPlayerPacket CommonPlayerPacket = new("null");
         public CommonPlayerPacketQueue CommonPlayerPackets { get; set; } = new(100);
-        public Weapon.EMalfunctionState MalfunctionState { get; set; } = Weapon.EMalfunctionState.None;
+        public Weapon.EMalfunctionState CurrentMalfunctionState { get; set; } = Weapon.EMalfunctionState.None;
 
         public static async Task<LocalPlayer> Create(
             int playerId,
@@ -993,9 +993,9 @@ namespace StayInTarkov.Coop.Players
 
             if (firearmController != null)
             {
-                if (packet.HasMalfunctionState)
+                if (packet.HasMalfunctionStatePacket)
                 {
-                    MalfunctionState = packet.MalfunctionState;
+                    CurrentMalfunctionState = packet.MalfunctionState;
                     //firearmController.Weapon.MalfState.ChangeStateSilent(packet.MalfunctionState);
                     //if (packet.MalfunctionState)
                     //{
@@ -1025,7 +1025,7 @@ namespace StayInTarkov.Coop.Players
                     //}
                 }
 
-                if (packet.HasIsTriggerPressedPacket)
+                if (packet.HasSetTriggerPressedPacket)
                     firearmController.SetTriggerPressed(packet.IsTriggerPressed);
 
                 if (packet.ChangeFireMode)

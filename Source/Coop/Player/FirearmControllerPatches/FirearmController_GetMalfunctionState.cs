@@ -25,7 +25,7 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
             var botPlayer = ____player as CoopBot;
             if (botPlayer != null)
             {
-                __result = botPlayer.MalfunctionState;
+                __result = botPlayer.CurrentMalfunctionState;
                 return false;
             }
 
@@ -33,7 +33,7 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
             if (player == null || player.IsYourPlayer)
                 return true;
 
-            __result = player.MalfunctionState;
+            __result = player.CurrentMalfunctionState;
             return false;
             
         }
@@ -45,7 +45,7 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
             if (player == null || !player.IsYourPlayer)
                 return;
 
-            player.WeaponPacket.HasMalfunctionState = true;
+            player.WeaponPacket.HasMalfunctionStatePacket = true;
             player.WeaponPacket.MalfunctionState = __result;
             player.WeaponPacket.ToggleSend();
         }

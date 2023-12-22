@@ -13,9 +13,9 @@ namespace StayInTarkov.Networking.Packets
     {
         public bool ShouldSend { get; private set; } = false;
         public string ProfileId { get; set; }
-        public bool HasMalfunctionState { get; set; }
+        public bool HasMalfunctionStatePacket { get; set; }
         public Weapon.EMalfunctionState MalfunctionState { get; set; }
-        public bool HasIsTriggerPressedPacket { get; set; }
+        public bool HasSetTriggerPressedPacket { get; set; }
         public bool IsTriggerPressed { get; set; }
         public bool ChangeFireMode { get; set; }
         public Weapon.EFireMode FireMode { get; set; }
@@ -55,8 +55,8 @@ namespace StayInTarkov.Networking.Packets
         public WeaponPacket(string profileId)
         {
             ProfileId = profileId;
-            HasMalfunctionState = false;
-            HasIsTriggerPressedPacket = false;
+            HasMalfunctionStatePacket = false;
+            HasSetTriggerPressedPacket = false;
             IsTriggerPressed = false;
             ChangeFireMode = false;
             ToggleAim = false;
@@ -85,10 +85,10 @@ namespace StayInTarkov.Networking.Packets
         public void Deserialize(NetDataReader reader)
         {
             ProfileId = reader.GetString();
-            HasMalfunctionState = reader.GetBool();
-            if (HasMalfunctionState)
+            HasMalfunctionStatePacket = reader.GetBool();
+            if (HasMalfunctionStatePacket)
                 MalfunctionState = (Weapon.EMalfunctionState)reader.GetInt();
-            HasIsTriggerPressedPacket = reader.GetBool();
+            HasSetTriggerPressedPacket = reader.GetBool();
             IsTriggerPressed = reader.GetBool();
             ChangeFireMode = reader.GetBool();
             FireMode = (Weapon.EFireMode)reader.GetInt();
@@ -140,10 +140,10 @@ namespace StayInTarkov.Networking.Packets
         public void Serialize(NetDataWriter writer)
         {
             writer.Put(ProfileId);
-            writer.Put(HasMalfunctionState);
-            if (HasMalfunctionState)
+            writer.Put(HasMalfunctionStatePacket);
+            if (HasMalfunctionStatePacket)
                 writer.Put((int)MalfunctionState);
-            writer.Put(HasIsTriggerPressedPacket);
+            writer.Put(HasSetTriggerPressedPacket);
             writer.Put(IsTriggerPressed);
             writer.Put(ChangeFireMode);
             writer.Put((int)FireMode);

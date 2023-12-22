@@ -30,7 +30,7 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
                 }
                 */
 
-                botPlayer.WeaponPacket.HasIsTriggerPressedPacket = true;
+                botPlayer.WeaponPacket.HasSetTriggerPressedPacket = true;
                 botPlayer.WeaponPacket.IsTriggerPressed = pressed;
                 botPlayer.WeaponPacket.ToggleSend();
                 return;
@@ -48,7 +48,7 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
             }
             */
 
-            player.WeaponPacket.HasIsTriggerPressedPacket = true;
+            player.WeaponPacket.HasSetTriggerPressedPacket = true;
             player.WeaponPacket.IsTriggerPressed = pressed;
             player.WeaponPacket.ToggleSend();
         }
