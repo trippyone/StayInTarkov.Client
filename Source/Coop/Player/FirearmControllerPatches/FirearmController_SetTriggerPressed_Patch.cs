@@ -16,17 +16,21 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
         }
 
         [PatchPostfix]
-        public static void PostPatch(EFT.Player.FirearmController __instance, bool pressed, EFT.Player ____player)
+        public static void Postfix(EFT.Player.FirearmController __instance, bool pressed, EFT.Player ____player)
         {
 
             var botPlayer = ____player as CoopBot;
             if (botPlayer != null)
             {
+                /*
                 if (__instance.Weapon.MalfState.State != EFT.InventoryLogic.Weapon.EMalfunctionState.None)
                 {
                     botPlayer.WeaponPacket.HasMalfunction = true;
                     botPlayer.WeaponPacket.MalfunctionState = __instance.Weapon.MalfState.State;
                 }
+                */
+
+                botPlayer.WeaponPacket.HasIsTriggerPressedPacket = true;
                 botPlayer.WeaponPacket.IsTriggerPressed = pressed;
                 botPlayer.WeaponPacket.ToggleSend();
                 return;
@@ -36,11 +40,15 @@ namespace StayInTarkov.Coop.Player.FirearmControllerPatches
             if (player == null || !player.IsYourPlayer)
                 return;
 
+            /*
             if (__instance.Weapon.MalfState.State != EFT.InventoryLogic.Weapon.EMalfunctionState.None)
             {
                 player.WeaponPacket.HasMalfunction = true;
                 player.WeaponPacket.MalfunctionState = __instance.Weapon.MalfState.State;
             }
+            */
+
+            player.WeaponPacket.HasIsTriggerPressedPacket = true;
             player.WeaponPacket.IsTriggerPressed = pressed;
             player.WeaponPacket.ToggleSend();
         }

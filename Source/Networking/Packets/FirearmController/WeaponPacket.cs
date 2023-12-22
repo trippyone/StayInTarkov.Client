@@ -13,8 +13,9 @@ namespace StayInTarkov.Networking.Packets
     {
         public bool ShouldSend { get; private set; } = false;
         public string ProfileId { get; set; }
-        public bool HasMalfunction { get; set; }
+        public bool HasMalfunctionState { get; set; }
         public Weapon.EMalfunctionState MalfunctionState { get; set; }
+        public bool HasIsTriggerPressedPacket { get; set; }
         public bool IsTriggerPressed { get; set; }
         public bool ChangeFireMode { get; set; }
         public Weapon.EFireMode FireMode { get; set; }
@@ -54,7 +55,8 @@ namespace StayInTarkov.Networking.Packets
         public WeaponPacket(string profileId)
         {
             ProfileId = profileId;
-            HasMalfunction = false;
+            HasMalfunctionState = false;
+            HasIsTriggerPressedPacket = false;
             IsTriggerPressed = false;
             ChangeFireMode = false;
             ToggleAim = false;
@@ -83,9 +85,10 @@ namespace StayInTarkov.Networking.Packets
         public void Deserialize(NetDataReader reader)
         {
             ProfileId = reader.GetString();
-            HasMalfunction = reader.GetBool();
-            if (HasMalfunction)
+            HasMalfunctionState = reader.GetBool();
+            if (HasMalfunctionState)
                 MalfunctionState = (Weapon.EMalfunctionState)reader.GetInt();
+            HasIsTriggerPressedPacket = reader.GetBool();
             IsTriggerPressed = reader.GetBool();
             ChangeFireMode = reader.GetBool();
             FireMode = (Weapon.EFireMode)reader.GetInt();
@@ -137,9 +140,10 @@ namespace StayInTarkov.Networking.Packets
         public void Serialize(NetDataWriter writer)
         {
             writer.Put(ProfileId);
-            writer.Put(HasMalfunction);
-            if (HasMalfunction)
+            writer.Put(HasMalfunctionState);
+            if (HasMalfunctionState)
                 writer.Put((int)MalfunctionState);
+            writer.Put(HasIsTriggerPressedPacket);
             writer.Put(IsTriggerPressed);
             writer.Put(ChangeFireMode);
             writer.Put((int)FireMode);
